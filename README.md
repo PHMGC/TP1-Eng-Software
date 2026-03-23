@@ -12,7 +12,7 @@ O WastedHours é uma plataforma web voltada para a curadoria, catalogação e av
 ## Tecnologias
 *	**Linguagem**: Python
 *	**Framework Backend**: Flask
-*	**Framework Frontend**: React
+*	**Framework Frontend**: React ?
 *	**Banco de Dados**: PostgreSQL
 *	**Agentes de IA**: Copilot (Gemini e GPT)
 
