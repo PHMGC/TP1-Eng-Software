@@ -1,6 +1,8 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from models import db, Game
+import math
+import json
 import os
 
 app = Flask(__name__)
@@ -26,6 +28,29 @@ def get_status():
         "database": "SQLite conectado"
     })
 
+<<<<<<< Updated upstream
+=======
+
+def get_total_ratings(game):
+    if not game.ratings_distribution: return 0
+    try:
+        dist = game.ratings_distribution
+        if isinstance(dist, str):
+            dist = json.loads(dist)
+        return sum(r.get('count', 0) for r in dist)
+    except:
+        return 0
+
+def imdb_score(game):
+    v = get_total_ratings(game)
+    R = game.rating or 0
+    if v == 0:
+        return R * 0.1
+    C = 3.5
+    m = 500
+    return (v / (v + m)) * R + (m / (v + m)) * C
+
+>>>>>>> Stashed changes
 @app.route('/api/games', methods=['GET'])
 def get_games():
     # Retorna os jogos armazenados no nosso banco de dados local
