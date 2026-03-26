@@ -41,11 +41,39 @@ class Game(db.Model):
 	# ESRB Rating (Flat relationship as it's usually one per game)
 	esrb_rating = db.Column(db.String(50), nullable=True)
 
+	# New Details Fields
+	description = db.Column(db.Text, nullable=True)
+	description_raw = db.Column(db.Text, nullable=True)
+	developers = db.Column(db.JSON, nullable=True)
+	publishers = db.Column(db.JSON, nullable=True)
+
 	# Relationships
 	platforms = db.relationship('Platform', secondary=game_platforms, backref='games')
 	genres = db.relationship('Genre', secondary=game_genres, backref='games')
 	tags = db.relationship('Tag', secondary=game_tags, backref='games')
 	screenshots = db.relationship('Screenshot', backref='game', lazy=True)
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'slug': self.slug,
+			'name': self.name,
+			'released': self.released.isoformat() if self.released else None,
+			'tba': self.tba,
+			'background_image': self.background_image,
+			'rating': self.rating,
+			'rating_top': self.rating_top,
+			'metacritic': self.metacritic,
+			'playtime': self.playtime,
+			'updated': self.updated.isoformat() if self.updated else None,
+			'ratings_distribution': self.ratings_distribution,
+			'added_by_status': self.added_by_status,
+			'esrb_rating': self.esrb_rating,
+			'description': self.description,
+			'description_raw': self.description_raw,
+			'developers': self.developers,
+			'publishers': self.publishers
+		}
 
 class Platform(db.Model):
 	__tablename__ = 'platforms'

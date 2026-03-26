@@ -10,17 +10,17 @@ RAWG_API_KEY = "b84ad05cc956467aa411bc2d3a7710d4"
 
 def fetch_json(url):
 	# try:
-	# 	req = urllib.request.Request(url, headers={'User-Agent': 'curl/7.81.0', 'Accept': '*/*'})
-	# 	with urllib.request.urlopen(req, timeout=15) as response:
-	# 		return json.loads(response.read().decode('utf-8'))
+	req = urllib.request.Request(url, headers={'User-Agent': 'curl/7.81.0', 'Accept': '*/*'})
+	with urllib.request.urlopen(req, timeout=15) as response:
+		return json.loads(response.read().decode('utf-8'))
 	# except Exception:
-		result = subprocess.run(['curl', '-s', '-4', url], capture_output=True, text=True, timeout=15)
-		if result.returncode == 0:
-			try:
-				return json.loads(result.stdout)
-			except:
-				pass
-	# return None
+	# 	result = subprocess.run(['curl', '-s', '-4', url], capture_output=True, text=True, timeout=15)
+	# 	if result.returncode == 0:
+	# 		try:
+	# 			return json.loads(result.stdout)
+	# 		except:
+	# 			pass
+	# # return None
 
 # Simple in-memory cache to avoid redundant DB queries
 cache = {
