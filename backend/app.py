@@ -1,7 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import db, Game
-import math
+from models import db, Game, Genre, Platform, Tag, Screenshot
+from datetime import datetime
 import json
 import os
 
@@ -28,8 +28,6 @@ def get_status():
         "database": "SQLite conectado"
     })
 
-<<<<<<< Updated upstream
-=======
 
 def get_total_ratings(game):
     if not game.ratings_distribution: return 0
@@ -50,12 +48,128 @@ def imdb_score(game):
     m = 500
     return (v / (v + m)) * R + (m / (v + m)) * C
 
->>>>>>> Stashed changes
 @app.route('/api/games', methods=['GET'])
 def get_games():
     # Retorna os jogos armazenados no nosso banco de dados local
-    games = Game.query.order_by(Game.rating.desc()).limit(50).all() # Retorna os 50 melhores como exemplo
+    query = Game.query.order_by(Game.rating.desc())
+    limit = request.args.get('limit', type=int, default=50)
+    games = query.limit(limit).all()
     return jsonify([game.to_dict() for game in games])
+
+
+def parse_date(value):
+    if not value:
+        return None
+    if isinstance(value, str):
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    if isinstance(value, datetime):
+        return value.date()
+    return None
+
+def parse_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, str):
+        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d %H:%M:%S.%f'):
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+        return None
+    if isinstance(value, datetime):
+        return value
+    return None
+
+
+def find_or_create_relation(model, payload):
+    if not payload or not isinstance(payload, dict):
+        raise ValueError('Invalid relation payload')
+    obj = None
+    if payload.get('id') is not None:
+        obj = model.query.get(payload['id'])
+    if obj is None and payload.get('slug'):
+        obj = model.query.filter_by(slug=payload['slug']).first()
+    if obj is None:
+        obj = model(**payload)
+        db.session.add(obj)
+    return obj
+
+
+def apply_game_data(game, data):
+    fields = [
+        'slug', 'name', 'tba', 'background_image', 'rating', 'rating_top',
+        'metacritic', 'playtime', 'esrb_rating', 'ratings_distribution', 'added_by_status'
+    ]
+    for field in fields:
+        if field in data:
+            setattr(game, field, data[field])
+
+    if 'released' in data:
+        game.released = parse_date(data['released'])
+    if 'updated' in data:
+        game.updated = parse_datetime(data['updated'])
+
+    if 'genres' in data:
+        game.genres = [find_or_create_relation(Genre, item) for item in data['genres'] if isinstance(item, dict)]
+    if 'platforms' in data:
+        game.platforms = [find_or_create_relation(Platform, item) for item in data['platforms'] if isinstance(item, dict)]
+    if 'tags' in data:
+        game.tags = [find_or_create_relation(Tag, item) for item in data['tags'] if isinstance(item, dict)]
+    if 'screenshots' in data:
+        game.screenshots = [Screenshot(game=game, image_url=item.get('image_url')) for item in data['screenshots'] if isinstance(item, dict) and item.get('image_url')]
+
+    return game
+
+
+@app.route('/api/games/<int:game_id>', methods=['GET'])
+def get_game(game_id):
+    game = Game.query.get_or_404(game_id)
+    return jsonify(game.to_dict())
+
+
+@app.route('/api/games', methods=['POST'])
+def create_game():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+    if not data.get('slug') or not data.get('name'):
+        return jsonify({'error': 'Fields slug and name are required'}), 400
+    if Game.query.filter_by(slug=data['slug']).first():
+        return jsonify({'error': 'Game with this slug already exists'}), 409
+
+    game = Game(
+        id=data.get('id'),
+        slug=data['slug'],
+        name=data['name']
+    )
+    apply_game_data(game, data)
+    db.session.add(game)
+    db.session.commit()
+    return jsonify(game.to_dict()), 201
+
+
+@app.route('/api/games/<int:game_id>', methods=['PUT'])
+def update_game(game_id):
+    game = Game.query.get_or_404(game_id)
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+    if 'slug' in data and data['slug'] != game.slug and Game.query.filter_by(slug=data['slug']).first():
+        return jsonify({'error': 'Another game with this slug already exists'}), 409
+    apply_game_data(game, data)
+    db.session.commit()
+    return jsonify(game.to_dict())
+
+
+@app.route('/api/games/<int:game_id>', methods=['DELETE'])
+def delete_game(game_id):
+    game = Game.query.get_or_404(game_id)
+    db.session.delete(game)
+    db.session.commit()
+    return jsonify({'status': 'deleted', 'id': game_id})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
