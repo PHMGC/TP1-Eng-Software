@@ -74,7 +74,7 @@ export default function Navbar() {
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              placeholder="Pesquisar jogos, gêneros..." 
+              placeholder="Pesquisar jogos..." 
               className="w-full bg-surface/80 border border-gray-800 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:bg-surface transition-all text-white placeholder:text-gray-500 shadow-inner"
             />
           </form>
