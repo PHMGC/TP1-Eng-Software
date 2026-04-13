@@ -88,12 +88,12 @@ def get_games():
         'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1
     })
 
-# @app.route('/api/games/<int:game_id>', methods=['GET'])
-# def get_game(game_id):
-#     game = db.session.get(Game, game_id)
-#     if not game:
-#         return jsonify({'error': 'Not found'}), 404
-#     return jsonify(game.to_dict())
+@app.route('/api/genres', methods=['GET'])
+def get_genres():
+    genres = Genre.query.all()
+    genres = [genre.to_dict() for genre in genres]
+
+    return jsonify(genres), 200
 
 
 def parse_date(value):
