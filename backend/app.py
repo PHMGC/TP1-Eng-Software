@@ -55,11 +55,15 @@ def get_games():
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
     search = request.args.get('search', '').lower()
+    genre = request.args.get('genre', '').lower()
     sort_by = request.args.get('sort', 'top')
     
     games = Game.query.all()
     if search:
-        games = [g for g in games if search in g.name.lower()]
+        games = [g for g in games if 
+            (not search or search in g.name.lower()) and 
+            (not genre or any(genre in gen.name.lower() for gen in g.genres))
+        ]
         
     if sort_by == 'trending':
         six_months_ago = date.today() - timedelta(days=183)
