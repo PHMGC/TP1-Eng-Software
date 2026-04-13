@@ -66,9 +66,13 @@ class Game(db.Model):
 			'metacritic': self.metacritic,
 			'playtime': self.playtime,
 			'updated': self.updated.isoformat() if self.updated else None,
+			'esrb_rating': self.esrb_rating,
 			'ratings_distribution': self.ratings_distribution,
 			'added_by_status': self.added_by_status,
-			'esrb_rating': self.esrb_rating,
+			'platforms': [platform.to_dict() for platform in self.platforms],
+			'genres': [genre.to_dict() for genre in self.genres],
+			'tags': [tag.to_dict() for tag in self.tags],
+			'screenshots': [screenshot.to_dict() for screenshot in self.screenshots],
 			'description': self.description,
 			'description_raw': self.description_raw,
 			'developers': self.developers,
@@ -81,11 +85,25 @@ class Platform(db.Model):
 	name = db.Column(db.String(100), nullable=False)
 	slug = db.Column(db.String(100), nullable=False)
 
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'name': self.name,
+			'slug': self.slug
+		}
+
 class Genre(db.Model):
 	__tablename__ = 'genres'
 	id = db.Column(db.Integer, primary_key=True)
 	name = db.Column(db.String(100), nullable=False)
 	slug = db.Column(db.String(100), nullable=False)
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'name': self.name,
+			'slug': self.slug
+		}
 
 class Tag(db.Model):
 	__tablename__ = 'tags'
@@ -94,8 +112,23 @@ class Tag(db.Model):
 	slug = db.Column(db.String(100), nullable=False)
 	language = db.Column(db.String(10))
 
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'name': self.name,
+			'slug': self.slug,
+			'language': self.language
+		}
+
 class Screenshot(db.Model):
 	__tablename__ = 'screenshots'
 	id = db.Column(db.Integer, primary_key=True) # Can be internal or RAWG ID
 	game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
 	image_url = db.Column(db.String(500), nullable=False)
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'game_id': self.game_id,
+			'image_url': self.image_url
+		}
