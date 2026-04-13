@@ -59,11 +59,10 @@ def get_games():
     sort_by = request.args.get('sort', 'top')
     
     games = Game.query.all()
+    if genre:
+        games = [g for g in games if (not genre or any(genre in gen.name.lower() for gen in g.genres))]
     if search:
-        games = [g for g in games if 
-            (not search or search in g.name.lower()) and 
-            (not genre or any(genre in gen.name.lower() for gen in g.genres))
-        ]
+        games = [g for g in games if (not search or search in g.name.lower())]
         
     if sort_by == 'trending':
         six_months_ago = date.today() - timedelta(days=183)
