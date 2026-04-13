@@ -15,6 +15,7 @@ export default function Home() {
   const [featuredGame, setFeaturedGame] = useState(null);
   const [trendingGames, setTrendingGames] = useState([]);
   const [catalogGames, setCatalogGames] = useState([]);
+  const [allGenres, setAllGenres] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,11 +63,32 @@ export default function Home() {
     fetchGames();
   }, [featuredGame]);
 
+  useEffect(() => {
+    async function fetchGenres() {
+      setLoading(true);
+      try {
+        const response = await api.get(`/genres`);
+        console.log(response);
+        const catSorted = response.data.sort();
+        setAllGenres(catSorted);
+      } catch (err) {
+        console.error('Error fetching genres:', err);
+        setError('Could not load genres. Make sure the backend is running.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    if(allGenres.length == 0) {
+      fetchGenres();
+    }
+  }, [allGenres]);
+
   // Cálculos flutuantes de paginação
   const slidesCount = Math.ceil(catalogGames.length / itemsPerPage);
 
   const trendingItemsPerPage = Math.max(1, itemsPerPage / 2);
   const trendingSlidesCount = 3;
+  const genresCount = 4;
   const perfectTrendingGames = trendingGames.slice(0, trendingItemsPerPage * trendingSlidesCount);
 
   const featuredScore = calculateScore(featuredGame);
@@ -197,6 +219,39 @@ export default function Home() {
           )}
         </section>
       )}
+
+      {/* Main Genres */}
+      {trendingGames.length > 0 && (
+        <section className="group/section mb-8">
+          <h2 className="justify-center text-4xl font-bold text-white flex items-center mb-8">
+            All Genres
+          </h2>
+          
+          <div className="relative mx-3 sm:mx-14 md:mx-16">
+            <div className="overflow-hidden relative w-full pt-1">
+              <div 
+                className="flex transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                style={{ transform: `translateX(-${activeTrendingSlide * 100}%)` }}
+              >
+                {Array.from({ length: genresCount }).map((_, slideIdx) => {
+                  return (
+                    <div key={slideIdx} className="w-full shrink-0 flex-none px-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        {allGenres.map(genre => (
+                          <button className="flex justify-center items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface">
+                            {genre.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      )} 
+
 
       {/* All Catalog */}
       <section className="group/section">
