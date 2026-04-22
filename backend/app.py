@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import db, Game, Genre, Platform, Tag, Screenshot
+from models import db, Game, Genre, Platform, Tag, Screenshot, User, Wishlist, Review
 from datetime import datetime, date, timedelta
 import json
 import math
@@ -326,6 +326,185 @@ def delete_game(game_id):
     db.session.delete(game)
     db.session.commit()
     return jsonify({'status': 'deleted', 'id': game_id})
+
+
+# Wishlist endpoints
+@app.route('/api/wishlist', methods=['GET'])
+def get_wishlist():
+    """Get user's wishlist. For now uses hardcoded user_id=1."""
+    user_id = 1  # TODO: Get from session/auth when implemented
+    wishlist_items = Wishlist.query.filter_by(user_id=user_id).all()
+    return jsonify([item.to_dict() for item in wishlist_items])
+
+
+@app.route('/api/wishlist', methods=['POST'])
+def add_to_wishlist():
+    """Add game to user's wishlist. Body: {game_id: int}."""
+    data = request.get_json(silent=True)
+    if not data or 'game_id' not in data:
+        return jsonify({'error': 'game_id is required'}), 400
+
+    user_id = 1  # TODO: Get from session/auth when implemented
+    game_id = data['game_id']
+
+    # Check if game exists
+    game = Game.query.get(game_id)
+    if not game:
+        return jsonify({'error': 'Game not found'}), 404
+
+    # Check if already in wishlist
+    existing = Wishlist.query.filter_by(user_id=user_id, game_id=game_id).first()
+    if existing:
+        return jsonify({'error': 'Game already in wishlist'}), 409
+
+    wishlist_item = Wishlist(user_id=user_id, game_id=game_id)
+    db.session.add(wishlist_item)
+    db.session.commit()
+
+    return jsonify(wishlist_item.to_dict()), 201
+
+
+@app.route('/api/wishlist/<int:game_id>', methods=['DELETE'])
+def remove_from_wishlist(game_id):
+    """Remove game from user's wishlist."""
+    user_id = 1  # TODO: Get from session/auth when implemented
+
+    wishlist_item = Wishlist.query.filter_by(user_id=user_id, game_id=game_id).first()
+    if not wishlist_item:
+        return jsonify({'error': 'Game not in wishlist'}), 404
+
+    db.session.delete(wishlist_item)
+    db.session.commit()
+
+    return jsonify({'status': 'removed', 'game_id': game_id})
+
+
+# Review endpoints
+@app.route('/api/reviews', methods=['GET'])
+def get_reviews():
+    """Get reviews. Params: game_id (optional), user_id (optional), limit, offset."""
+    game_id = request.args.get('game_id', type=int)
+    user_id = request.args.get('user_id', type=int)
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+
+    query = Review.query
+    if game_id:
+        query = query.filter_by(game_id=game_id)
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+
+    reviews = query.order_by(Review.created_at.desc()).offset(offset).limit(limit).all()
+    return jsonify([review.to_dict() for review in reviews])
+
+
+@app.route('/api/reviews', methods=['POST'])
+def create_review():
+    """Create or update a review. Body: {game_id: int, rating: float, playtime_hours?: int, review_text?: string}."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    required_fields = ['game_id', 'rating']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'{field} is required'}), 400
+
+    user_id = 1  # TODO: Get from session/auth when implemented
+    game_id = data['game_id']
+    rating = data['rating']
+
+    # Validate rating range (1-10)
+    if not (1 <= rating <= 10):
+        return jsonify({'error': 'Rating must be between 1 and 10'}), 400
+
+    # Check if game exists
+    game = Game.query.get(game_id)
+    if not game:
+        return jsonify({'error': 'Game not found'}), 404
+
+    # Check if review already exists
+    existing_review = Review.query.filter_by(user_id=user_id, game_id=game_id).first()
+
+    if existing_review:
+        # Update existing review
+        existing_review.rating = rating
+        if 'playtime_hours' in data:
+            existing_review.playtime_hours = data['playtime_hours']
+        if 'review_text' in data:
+            existing_review.review_text = data['review_text']
+        db.session.commit()
+        return jsonify(existing_review.to_dict())
+    else:
+        # Create new review
+        review = Review(
+            user_id=user_id,
+            game_id=game_id,
+            rating=rating,
+            playtime_hours=data.get('playtime_hours'),
+            review_text=data.get('review_text')
+        )
+        db.session.add(review)
+        db.session.commit()
+        return jsonify(review.to_dict()), 201
+
+
+@app.route('/api/reviews/<int:review_id>', methods=['PUT'])
+def update_review(review_id):
+    """Update a review. Body: {rating?: float, playtime_hours?: int, review_text?: string}."""
+    review = Review.query.get_or_404(review_id)
+
+    # TODO: Check if user owns this review when auth is implemented
+    user_id = 1  # TODO: Get from session/auth when implemented
+    if review.user_id != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    if 'rating' in data:
+        rating = data['rating']
+        if not (1 <= rating <= 10):
+            return jsonify({'error': 'Rating must be between 1 and 10'}), 400
+        review.rating = rating
+
+    if 'playtime_hours' in data:
+        review.playtime_hours = data['playtime_hours']
+
+    if 'review_text' in data:
+        review.review_text = data['review_text']
+
+    db.session.commit()
+    return jsonify(review.to_dict())
+
+
+@app.route('/api/reviews/<int:review_id>', methods=['DELETE'])
+def delete_review(review_id):
+    """Delete a review."""
+    review = Review.query.get_or_404(review_id)
+
+    # TODO: Check if user owns this review when auth is implemented
+    user_id = 1  # TODO: Get from session/auth when implemented
+    if review.user_id != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    db.session.delete(review)
+    db.session.commit()
+    return jsonify({'status': 'deleted', 'id': review_id})
+
+
+@app.route('/api/games/<int:game_id>/user-review', methods=['GET'])
+def get_user_review_for_game(game_id):
+    """Get current user's review for a specific game."""
+    user_id = 1  # TODO: Get from session/auth when implemented
+
+    review = Review.query.filter_by(user_id=user_id, game_id=game_id).first()
+    if not review:
+        return jsonify({'message': 'No review found'}), 404
+
+    return jsonify(review.to_dict())
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

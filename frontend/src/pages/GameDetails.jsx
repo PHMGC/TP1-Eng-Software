@@ -1,13 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2 } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X } from 'lucide-react';
 
 export default function GameDetails() {
   const { id } = useParams();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [userReview, setUserReview] = useState(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingForm, setRatingForm] = useState({
+    rating: 5,
+    playtime_hours: '',
+    review_text: ''
+  });
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   useEffect(() => {
     async function fetchGame() {
@@ -23,6 +33,133 @@ export default function GameDetails() {
     }
     fetchGame();
   }, [id]);
+
+  // Check wishlist status when game loads
+  useEffect(() => {
+    if (game) {
+      async function checkWishlistStatus() {
+        try {
+          const response = await api.get('/wishlist');
+          const inWishlist = response.data.some(item => item.game_id === game.id);
+          setIsInWishlist(inWishlist);
+        } catch (err) {
+          console.error('Error checking wishlist status:', err);
+        }
+      }
+      checkWishlistStatus();
+    }
+  }, [game]);
+
+  // Check user review when game loads
+  useEffect(() => {
+    if (game) {
+      async function fetchUserReview() {
+        try {
+          const response = await api.get(`/games/${game.id}/user-review`);
+          setUserReview(response.data);
+          setRatingForm({
+            rating: response.data.rating,
+            playtime_hours: response.data.playtime_hours || '',
+            review_text: response.data.review_text || ''
+          });
+        } catch (err) {
+          // No review found, that's okay
+          setUserReview(null);
+        }
+      }
+      fetchUserReview();
+    }
+  }, [game]);
+
+  const handleWishlistToggle = async () => {
+    if (wishlistLoading || !game) return;
+
+    setWishlistLoading(true);
+    try {
+      if (isInWishlist) {
+        await api.delete(`/wishlist/${game.id}`);
+        setIsInWishlist(false);
+      } else {
+        await api.post('/wishlist', { game_id: game.id });
+        setIsInWishlist(true);
+      }
+    } catch (err) {
+      console.error('Error updating wishlist:', err);
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const handleRatingSubmit = async (e) => {
+    e.preventDefault();
+    if (ratingLoading || !game) return;
+
+    setRatingLoading(true);
+    try {
+      const reviewData = {
+        game_id: game.id,
+        rating: parseFloat(ratingForm.rating),
+        playtime_hours: ratingForm.playtime_hours ? parseInt(ratingForm.playtime_hours) : null,
+        review_text: ratingForm.review_text.trim() || null
+      };
+
+      const response = await api.post('/reviews', reviewData);
+      setUserReview(response.data);
+      setShowRatingModal(false);
+    } catch (err) {
+      console.error('Error submitting rating:', err);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
+  const handleRatingFormChange = (field, value) => {
+    setRatingForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <div className="animate-pulse w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin"/>
+    </div>
+  );
+
+  if (error || !game) return (
+    <div className="text-center py-20 text-red-400">
+      <ShieldAlert size={48} className="mx-auto mb-4" />
+      <h2 className="text-xl">{error}</h2>
+      <Link to="/" className="text-primary mt-4 inline-block hover:underline">Return to Home</Link>
+    </div>
+  );
+
+  const releaseDate = game.released ? new Date(game.released).toLocaleDateString() : 'Unknown';
+  const reviewsCount = game.ratings_distribution ? 
+    game.ratings_distribution.reduce((acc, r) => acc + (r.count || 0), 0) : 
+    Math.floor(Math.random() * 50000 + 1000); // Simulando total de avaliações
+
+  // Simulando se os reviews são "Muito Positivos" estilo Steam
+  let reviewSentiment = "Mixed";
+  let sentimentColor = "text-yellow-400";
+  if (game.rating >= 4.5) { reviewSentiment = "Overwhelmingly Positive"; sentimentColor = "text-blue-400"; }
+  else if (game.rating >= 4.0) { reviewSentiment = "Very Positive"; sentimentColor = "text-cyan-400"; }
+  else if (game.rating >= 3.5) { reviewSentiment = "Mostly Positive"; sentimentColor = "text-green-400"; }
+
+  const getCleanDescription = (desc) => {
+    if (!desc) return null;
+    const splitIndex = desc.search(/(<p>|<br\s*\/?>|\n)\s*(Español|Spanish|Deutsch|Français|Italiano|Русский|Português)\b/i);
+    if (splitIndex !== -1) {
+      return desc.substring(0, splitIndex).trim();
+    }
+    return desc;
+  };
+
+  const cleanDesc = getCleanDescription(game.description);
+  
+  function getBadge(r, reviews) {
+    if (r >= 4.0 && reviews >= 500) return { icon: "🤩", text: "Masterpiece", desc: "Sleep is for the weak" };
+    if (r < 3.5 || reviews < 50) return { icon: "🛌", text: "Sleep Fest", desc: "Certified snooze fest" };
+    return { icon: "👍", text: "Solid Game", desc: "Worth your time" };
+  }
+  const statusBadge = getBadge(game.rating, reviewsCount);
 
   if (loading) return (
     <div className="flex justify-center py-20">
@@ -179,14 +316,28 @@ export default function GameDetails() {
             </div>
 
             <h3 className="text-lg font-bold text-white mb-4 border-t border-gray-800 pt-6">Manage on WastedHours</h3>
-            <button className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5">
-              <Star size={20} />
-              Rate Game
-            </button>
-            <button className="w-full flex items-center justify-center gap-2 bg-surface hover:bg-gray-800 border border-gray-700 text-white py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5">
-              <Heart size={20} className="text-gray-400" />
-              Add to Wishlist
-            </button>
+            <div className="space-y-3">
+              <button className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5">
+                <Star size={20} />
+                Rate Game
+              </button>
+              <button
+                onClick={handleWishlistToggle}
+                disabled={wishlistLoading}
+                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
+                  isInWishlist
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-surface hover:bg-gray-800 border border-gray-700 text-white'
+                } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {wishlistLoading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Heart size={20} className={isInWishlist ? 'fill-current' : ''} />
+                )}
+                {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              </button>
+            </div>
 
             {game.esrb_rating && (
               <div className="mt-8 pt-6 border-t border-gray-800 flex items-center gap-4">

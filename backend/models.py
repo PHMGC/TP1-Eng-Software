@@ -132,3 +132,72 @@ class Screenshot(db.Model):
 			'game_id': self.game_id,
 			'image_url': self.image_url
 		}
+
+class User(db.Model):
+	__tablename__ = 'users'
+	id = db.Column(db.Integer, primary_key=True)
+	username = db.Column(db.String(100), unique=True, nullable=False)
+	email = db.Column(db.String(255), unique=True, nullable=False)
+	password_hash = db.Column(db.String(255), nullable=False)
+	created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+	# Relationships
+	wishlist_items = db.relationship('Wishlist', backref='user', lazy=True)
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'username': self.username,
+			'email': self.email,
+			'created_at': self.created_at.isoformat() if self.created_at else None
+		}
+
+class Wishlist(db.Model):
+	__tablename__ = 'wishlist'
+	id = db.Column(db.Integer, primary_key=True)
+	user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+	game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+	added_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+	# Relationships
+	game = db.relationship('Game', backref='wishlist_entries')
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'user_id': self.user_id,
+			'game_id': self.game_id,
+			'added_at': self.added_at.isoformat() if self.added_at else None,
+			'game': self.game.to_dict() if self.game else None
+		}
+
+class Review(db.Model):
+	__tablename__ = 'reviews'
+	id = db.Column(db.Integer, primary_key=True)
+	user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+	game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+	rating = db.Column(db.Float, nullable=False)  # 1-10 scale
+	playtime_hours = db.Column(db.Integer, nullable=True)
+	review_text = db.Column(db.Text, nullable=True)
+	created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+	updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+	# Relationships
+	user = db.relationship('User', backref='reviews')
+	game = db.relationship('Game', backref='reviews')
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'user_id': self.user_id,
+			'game_id': self.game_id,
+			'rating': self.rating,
+			'playtime_hours': self.playtime_hours,
+			'review_text': self.review_text,
+			'created_at': self.created_at.isoformat() if self.created_at else None,
+			'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+			'user': {
+				'id': self.user.id,
+				'username': self.user.username
+			} if self.user else None
+		}
