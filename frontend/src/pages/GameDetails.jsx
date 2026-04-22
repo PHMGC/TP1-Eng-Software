@@ -161,50 +161,6 @@ export default function GameDetails() {
   }
   const statusBadge = getBadge(game.rating, reviewsCount);
 
-  if (loading) return (
-    <div className="flex justify-center py-20">
-      <div className="animate-pulse w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin"/>
-    </div>
-  );
-
-  if (error || !game) return (
-    <div className="text-center py-20 text-red-400">
-      <ShieldAlert size={48} className="mx-auto mb-4" />
-      <h2 className="text-xl">{error}</h2>
-      <Link to="/" className="text-primary mt-4 inline-block hover:underline">Return to Home</Link>
-    </div>
-  );
-
-  const releaseDate = game.released ? new Date(game.released).toLocaleDateString() : 'Unknown';
-  const reviewsCount = game.ratings_distribution ? 
-    game.ratings_distribution.reduce((acc, r) => acc + (r.count || 0), 0) : 
-    Math.floor(Math.random() * 50000 + 1000); // Simulando total de avaliações
-
-  // Simulando se os reviews são "Muito Positivos" estilo Steam
-  let reviewSentiment = "Mixed";
-  let sentimentColor = "text-yellow-400";
-  if (game.rating >= 4.5) { reviewSentiment = "Overwhelmingly Positive"; sentimentColor = "text-blue-400"; }
-  else if (game.rating >= 4.0) { reviewSentiment = "Very Positive"; sentimentColor = "text-cyan-400"; }
-  else if (game.rating >= 3.5) { reviewSentiment = "Mostly Positive"; sentimentColor = "text-green-400"; }
-
-  const getCleanDescription = (desc) => {
-    if (!desc) return null;
-    const splitIndex = desc.search(/(<p>|<br\s*\/?>|\n)\s*(Español|Spanish|Deutsch|Français|Italiano|Русский|Português)\b/i);
-    if (splitIndex !== -1) {
-      return desc.substring(0, splitIndex).trim();
-    }
-    return desc;
-  };
-
-  const cleanDesc = getCleanDescription(game.description);
-  
-  function getBadge(r, reviews) {
-    if (r >= 4.0 && reviews >= 500) return { icon: "🤩", text: "Masterpiece", desc: "Sleep is for the weak" };
-    if (r < 3.5 || reviews < 50) return { icon: "🛌", text: "Sleep Fest", desc: "Certified snooze fest" };
-    return { icon: "👍", text: "Solid Game", desc: "Worth your time" };
-  }
-  const statusBadge = getBadge(game.rating, reviewsCount);
-
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-20">
       <Link to="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 hover:-translate-x-1 transition-transform bg-surface/50 border border-gray-800 rounded-lg px-4 py-2">
@@ -271,9 +227,48 @@ export default function GameDetails() {
             </h2>
             
             <div className="space-y-6">
-              <div className="bg-surface/50 p-5 rounded-xl border border-gray-800 text-center">
-                <p className="text-gray-400">Not available.</p>
-              </div>
+              {userReview ? (
+                <div className="bg-surface/50 p-5 rounded-xl border border-gray-800">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{userReview.user?.username || 'You'}</span>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            size={14}
+                            className={i < Math.floor(userReview.rating / 2) ? 'text-yellow-400 fill-current' : 'text-gray-600'}
+                          />
+                        ))}
+                        <span className="text-sm text-gray-300 ml-1">{userReview.rating}/10</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(userReview.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  {userReview.playtime_hours && (
+                    <div className="text-sm text-gray-400 mb-2">
+                      Playtime: {userReview.playtime_hours} hours
+                    </div>
+                  )}
+                  
+                  {userReview.review_text && (
+                    <p className="text-gray-300 text-sm leading-relaxed">{userReview.review_text}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-surface/50 p-5 rounded-xl border border-gray-800 text-center">
+                  <p className="text-gray-400">You haven't reviewed this game yet.</p>
+                  <button
+                    onClick={() => setShowRatingModal(true)}
+                    className="mt-3 px-4 py-2 bg-primary hover:bg-primaryHover text-white text-sm rounded-lg transition-colors"
+                  >
+                    Write a Review
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -317,9 +312,12 @@ export default function GameDetails() {
 
             <h3 className="text-lg font-bold text-white mb-4 border-t border-gray-800 pt-6">Manage on WastedHours</h3>
             <div className="space-y-3">
-              <button className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5">
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5"
+              >
                 <Star size={20} />
-                Rate Game
+                {userReview ? 'Update Review' : 'Rate Game'}
               </button>
               <button
                 onClick={handleWishlistToggle}
@@ -351,6 +349,111 @@ export default function GameDetails() {
         </div>
 
       </div>
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-gray-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  {userReview ? 'Update Your Review' : 'Rate This Game'}
+                </h3>
+                <button
+                  onClick={() => setShowRatingModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleRatingSubmit} className="space-y-6">
+                {/* Rating Stars */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Your Rating (1-10)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="0.5"
+                      value={ratingForm.rating}
+                      onChange={(e) => handleRatingFormChange('rating', e.target.value)}
+                      className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <span className="text-white font-semibold min-w-[3rem] text-center">
+                      {ratingForm.rating}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>Poor</span>
+                    <span>Excellent</span>
+                  </div>
+                </div>
+
+                {/* Playtime */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Hours Played (optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 25"
+                    value={ratingForm.playtime_hours}
+                    onChange={(e) => handleRatingFormChange('playtime_hours', e.target.value)}
+                    className="w-full bg-surfaceHover border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                {/* Review Text */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Your Review (optional)
+                  </label>
+                  <textarea
+                    rows="4"
+                    placeholder="Share your thoughts about this game..."
+                    value={ratingForm.review_text}
+                    onChange={(e) => handleRatingFormChange('review_text', e.target.value)}
+                    className="w-full bg-surfaceHover border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary resize-none"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowRatingModal(false)}
+                    className="flex-1 px-4 py-2 bg-surface border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={ratingLoading}
+                    className="flex-1 px-4 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {ratingLoading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Star size={16} />
+                        {userReview ? 'Update Review' : 'Submit Review'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
