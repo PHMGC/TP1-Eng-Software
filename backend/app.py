@@ -127,10 +127,18 @@ def filter_games():
     games = Game.query.all()
     
     if genre_name:
-        games = [g for g in games if any(genre_name in gen.name.lower() for gen in g.genres)]
+        # More robust genre matching - check both name and slug
+        games = [g for g in games if any(
+            genre_name in gen.name.lower() or genre_name in gen.slug.lower() 
+            for gen in g.genres
+        )]
     
     if platform_name:
-        games = [g for g in games if any(platform_name in plat.name.lower() for plat in g.platforms)]
+        # More robust platform matching - check both name and slug
+        games = [g for g in games if any(
+            platform_name in plat.name.lower() or platform_name in plat.slug.lower()
+            for plat in g.platforms
+        )]
     
     if rating_min is not None:
         games = [g for g in games if g.rating and g.rating >= rating_min]

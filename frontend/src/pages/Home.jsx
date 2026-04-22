@@ -222,33 +222,22 @@ export default function Home() {
       )}
 
       {/* Main Genres */}
-      {trendingGames.length > 0 && (
+      {allGenres.length > 0 && (
         <section className="group/section mb-8">
           <h2 className="justify-center text-4xl font-bold text-white flex items-center mb-8">
-            All Genres
+            Browse by Genre
           </h2>
           
-          <div className="relative mx-3 sm:mx-14 md:mx-16">
-            <div className="overflow-hidden relative w-full pt-1">
-              <div 
-                className="flex transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
-                style={{ transform: `translateX(-${activeTrendingSlide * 100}%)` }}
+          <div className="flex flex-wrap justify-center gap-4 max-w-6xl mx-auto">
+            {allGenres.map(genre => (
+              <button 
+                key={genre.id}
+                onClick={() => window.location.href = `/search?genre=${encodeURIComponent(genre.name)}`}
+                className="flex justify-center items-center gap-2 text-gray-400 hover:text-white transition-all border border-gray-800 rounded-full px-4 py-2 bg-surface/30 hover:bg-surface hover:border-primary/50 hover:scale-105 transform"
               >
-                {Array.from({ length: genresCount }).map((_, slideIdx) => {
-                  return (
-                    <div key={slideIdx} className="w-full shrink-0 flex-none px-1">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        {allGenres.map(genre => (
-                          <button className="flex justify-center items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface">
-                            {genre.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                {genre.name}
+              </button>
+            ))}
           </div>
         </section>
       )} 
