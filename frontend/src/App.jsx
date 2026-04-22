@@ -3,6 +3,8 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import GameDetails from './pages/GameDetails';
 import SearchResults from './pages/SearchResults';
+import Wishlist from './pages/Wishlist';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/game/:id" element={<GameDetails />} />
             <Route path="/search" element={<SearchResults />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

@@ -52,43 +52,60 @@ def imdb_score(game):
 
 @app.route('/api/games', methods=['GET'])
 def get_games():
-    """List all games paginated and sorted by IMDB score. Params: page, limit, offset."""
+    """List, search, or sort games. Params: page, limit, offset, search, sort."""
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
-    
-    games = Game.query.all()
-    games.sort(key=imdb_score, reverse=True)
-    
+    search = request.args.get('search', '').strip()
+    sort = request.args.get('sort', '').strip().lower()
+
+    if search:
+        games = Game.query.filter(Game.name.ilike(f'%{search}%')).all()
+    elif sort == 'trending':
+        six_months_ago = date.today() - timedelta(days=183)
+        games = Game.query.filter(
+            Game.released.isnot(None),
+            Game.released >= six_months_ago
+        ).all()
+        if len(games) < limit + offset:
+            games = Game.query.filter(Game.released.isnot(None)).order_by(Game.released.desc()).all()
+    elif sort == 'top_rated':
+        games = Game.query.filter(Game.rating.isnot(None)).order_by(Game.rating.desc()).all()
+    else:
+        games = Game.query.all()
+
+    if sort != 'top_rated':
+        games.sort(key=imdb_score, reverse=True)
+
     start = ((page - 1) * limit) + offset
     end = start + limit
     paginated = games[start:end]
-    
+
     return jsonify({
         'data': [game.to_dict() for game in paginated],
         'total': len(games),
         'page': page,
-        'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1
+        'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1,
+        'filters': {
+            'search': search or None,
+            'sort': sort or None
+        }
     })
 
 @app.route('/api/games/search', methods=['GET'])
 def search_games():
-    """Search games by name. Params: query (required), limit, offset."""
-    query = request.args.get('query', '').strip()
+    """Search games by name. Params: query or search (required), limit, offset."""
+    query = request.args.get('query', '').strip() or request.args.get('search', '').strip()
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
-    
+
     if not query:
         return jsonify({'error': 'query parameter is required'}), 400
-    
-    query_lower = query.lower()
-    games = Game.query.filter(
-        Game.name.ilike(f'%{query_lower}%')
-    ).all()
-    
+
+    games = Game.query.filter(Game.name.ilike(f'%{query}%')).all()
     games.sort(key=imdb_score, reverse=True)
     paginated = games[offset:offset + limit]
-    
+
     return jsonify({
         'data': [game.to_dict() for game in paginated],
         'total': len(games),

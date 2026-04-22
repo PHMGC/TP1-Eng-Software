@@ -68,8 +68,9 @@ export default function Home() {
       setLoading(true);
       try {
         const response = await api.get(`/genres`);
-        console.log(response);
-        const catSorted = response.data.sort();
+        const catSorted = response.data
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name));
         setAllGenres(catSorted);
       } catch (err) {
         console.error('Error fetching genres:', err);
@@ -78,7 +79,7 @@ export default function Home() {
         setLoading(false);
       }
     }
-    if(allGenres.length == 0) {
+    if (allGenres.length === 0) {
       fetchGenres();
     }
   }, [allGenres]);
