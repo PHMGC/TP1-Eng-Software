@@ -23,6 +23,7 @@ with app.app_context():
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
+    """Check API health and database connection status."""
     return jsonify({
         "status": "success",
         "message": "A API Flask está rodando corretamente!",
@@ -51,29 +52,12 @@ def imdb_score(game):
 
 @app.route('/api/games', methods=['GET'])
 def get_games():
+    """List all games paginated and sorted by IMDB score. Params: page, limit, offset."""
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
-    search = request.args.get('search', '').lower()
-    genre = request.args.get('genre', '').lower()
-    sort_by = request.args.get('sort', 'top')
     
     games = Game.query.all()
-    if genre:
-        games = [g for g in games if (not genre or any(genre in gen.name.lower() for gen in g.genres))]
-    if search:
-        games = [g for g in games if (not search or search in g.name.lower())]
-        
-    if sort_by == 'trending':
-        six_months_ago = date.today() - timedelta(days=183)
-        recent = [g for g in games if g.released and g.released >= six_months_ago]
-        
-        # Fallback to absolute recent releases sorted by date just in case DB doesn't have enough 6-months games
-        if len(recent) < limit + offset:  
-            recent = sorted([g for g in games if g.released], key=lambda x: x.released, reverse=True)[:limit+offset]
-            
-        games = recent
-        
     games.sort(key=imdb_score, reverse=True)
     
     start = ((page - 1) * limit) + offset
@@ -87,8 +71,121 @@ def get_games():
         'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1
     })
 
+@app.route('/api/games/search', methods=['GET'])
+def search_games():
+    """Search games by name. Params: query (required), limit, offset."""
+    query = request.args.get('query', '').strip()
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+    
+    if not query:
+        return jsonify({'error': 'query parameter is required'}), 400
+    
+    query_lower = query.lower()
+    games = Game.query.filter(
+        Game.name.ilike(f'%{query_lower}%')
+    ).all()
+    
+    games.sort(key=imdb_score, reverse=True)
+    paginated = games[offset:offset + limit]
+    
+    return jsonify({
+        'data': [game.to_dict() for game in paginated],
+        'total': len(games),
+        'limit': limit,
+        'offset': offset
+    })
+
+
+@app.route('/api/games/filter', methods=['GET'])
+def filter_games():
+    """Filter games by genre, platform, and rating. Params: genre, platform, rating_min, rating_max, limit, offset."""
+    genre_name = request.args.get('genre', '').strip().lower()
+    platform_name = request.args.get('platform', '').strip().lower()
+    rating_min = request.args.get('rating_min', type=float)
+    rating_max = request.args.get('rating_max', type=float)
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+    
+    games = Game.query.all()
+    
+    if genre_name:
+        games = [g for g in games if any(genre_name in gen.name.lower() for gen in g.genres)]
+    
+    if platform_name:
+        games = [g for g in games if any(platform_name in plat.name.lower() for plat in g.platforms)]
+    
+    if rating_min is not None:
+        games = [g for g in games if g.rating and g.rating >= rating_min]
+    
+    if rating_max is not None:
+        games = [g for g in games if g.rating and g.rating <= rating_max]
+    
+    games.sort(key=imdb_score, reverse=True)
+    paginated = games[offset:offset + limit]
+    
+    return jsonify({
+        'data': [game.to_dict() for game in paginated],
+        'total': len(games),
+        'limit': limit,
+        'offset': offset,
+        'filters': {
+            'genre': genre_name or None,
+            'platform': platform_name or None,
+            'rating_min': rating_min,
+            'rating_max': rating_max
+        }
+    })
+
+
+@app.route('/api/games/top-rated', methods=['GET'])
+def top_rated_games():
+    """Get top-rated games sorted by rating. Params: limit, offset."""
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+    
+    games = Game.query.filter(Game.rating.isnot(None)).order_by(Game.rating.desc()).all()
+    paginated = games[offset:offset + limit]
+    
+    return jsonify({
+        'data': [game.to_dict() for game in paginated],
+        'total': len(games),
+        'limit': limit,
+        'offset': offset,
+        'sort': 'top_rated'
+    })
+
+
+@app.route('/api/games/trending', methods=['GET'])
+def trending_games():
+    """Get trending games from the last 6 months sorted by IMDB score. Params: limit, offset."""
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+    
+    six_months_ago = date.today() - timedelta(days=183)
+    games = Game.query.filter(
+        Game.released.isnot(None),
+        Game.released >= six_months_ago
+    ).all()
+    
+    if len(games) < limit + offset:
+        games = Game.query.filter(Game.released.isnot(None)).order_by(Game.released.desc()).all()
+    
+    games.sort(key=imdb_score, reverse=True)
+    paginated = games[offset:offset + limit]
+    
+    return jsonify({
+        'data': [game.to_dict() for game in paginated],
+        'total': len(games),
+        'limit': limit,
+        'offset': offset,
+        'sort': 'trending'
+    })
+
+
 @app.route('/api/genres', methods=['GET'])
 def get_genres():
+    """Get all available genres."""
     genres = Genre.query.all()
     genres = [genre.to_dict() for genre in genres]
 
@@ -164,12 +261,14 @@ def apply_game_data(game, data):
 
 @app.route('/api/games/<int:game_id>', methods=['GET'])
 def get_game(game_id):
+    """Get a single game by ID with all details and relationships."""
     game = Game.query.get_or_404(game_id)
     return jsonify(game.to_dict())
 
 
 @app.route('/api/games', methods=['POST'])
 def create_game():
+    """Create a new game. Required: slug, name. Supports genres, platforms, tags, screenshots."""
     data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'JSON body required'}), 400
@@ -191,6 +290,7 @@ def create_game():
 
 @app.route('/api/games/<int:game_id>', methods=['PUT'])
 def update_game(game_id):
+    """Update an existing game. Partial updates supported."""
     game = Game.query.get_or_404(game_id)
     data = request.get_json(silent=True)
     if not data:
@@ -204,6 +304,7 @@ def update_game(game_id):
 
 @app.route('/api/games/<int:game_id>', methods=['DELETE'])
 def delete_game(game_id):
+    """Delete a game by ID."""
     game = Game.query.get_or_404(game_id)
     db.session.delete(game)
     db.session.commit()
