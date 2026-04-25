@@ -50,6 +50,12 @@ def imdb_score(game):
     m = 500
     return (v / (v + m)) * R + (m / (v + m)) * C
 
+def wasted_score(game):
+    rating = game.rating or 0
+    base = rating * 1.5
+    playtime_bonus = min(2.5, (game.playtime or 0) / 20)
+    return base + playtime_bonus
+
 @app.route('/api/games', methods=['GET'])
 def get_games():
     """List, search, filter or sort games. Params: page, limit, offset, search, genre, sort, minRating, maxRating, minPlaytime, maxPlaytime."""
@@ -126,9 +132,11 @@ def get_games():
         games.sort(key=lambda g: (g.name or '').lower())
     elif sort_by == 'name_desc':
         games.sort(key=lambda g: (g.name or '').lower(), reverse=True)
+    elif sort_by == 'wasted_score':
+        games.sort(key=wasted_score, reverse=True)
     else:
-        # Default and backwards-compatible ranking using IMDB score
-        games.sort(key=imdb_score, reverse=True)
+        # Default ranking using Wasted Hours Score (Purple -> Blue -> Gray)
+        games.sort(key=wasted_score, reverse=True)
 
     start = ((page - 1) * limit) + offset
     end = start + limit
