@@ -117,9 +117,10 @@ def get_games():
         six_months_ago = date.today() - timedelta(days=183)
         recent = [g for g in games if g.released and g.released >= six_months_ago]
         if len(recent) < limit + offset:
-            recent = sorted([g for g in games if g.released], key=lambda x: x.released, reverse=True)
+            # Fallback: Get the 100 most recent games if the 6-month pool is too small
+            recent = sorted([g for g in games if g.released], key=lambda x: x.released, reverse=True)[:100]
         games = recent
-        games.sort(key=imdb_score, reverse=True)
+        games.sort(key=wasted_score, reverse=True)
     elif sort_by == 'top_rated' or sort_by == 'rating_desc':
         games.sort(key=lambda g: g.rating or 0, reverse=True)
     elif sort_by == 'rating_asc':
@@ -244,7 +245,7 @@ def top_rated_games():
 
 @app.route('/api/games/trending', methods=['GET'])
 def trending_games():
-    """Get trending games from the last 6 months sorted by IMDB score. Params: limit, offset."""
+    """Get trending games from the last 6 months sorted by Wasted score. Params: limit, offset."""
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
     
@@ -255,9 +256,10 @@ def trending_games():
     ).all()
     
     if len(games) < limit + offset:
-        games = Game.query.filter(Game.released.isnot(None)).order_by(Game.released.desc()).all()
+        # Fallback: Get the 100 most recent games if the 6-month pool is too small
+        games = Game.query.filter(Game.released.isnot(None)).order_by(Game.released.desc()).limit(100).all()
     
-    games.sort(key=imdb_score, reverse=True)
+    games.sort(key=wasted_score, reverse=True)
     paginated = games[offset:offset + limit]
     
     return jsonify({
