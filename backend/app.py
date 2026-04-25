@@ -141,7 +141,7 @@ def get_games():
         'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1,
         'filters': {
             'search': search or None,
-            'sort': sort or None
+            'sort': sort_by or None
         }
     })
 
