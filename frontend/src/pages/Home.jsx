@@ -2,14 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import GameCard from '../components/GameCard';
 import api from '../lib/api';
 import { Trophy, Flame, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-
-// A formula única do WastedHours fora do componente para uso em arrays locais
-const calculateScore = (game) => {
-  if (!game) return 0;
-  const base = (game.rating || 0) * 1.5;
-  const playtimeBonus = Math.min(2.5, (game.playtime || 0) / 20);
-  return parseFloat((base + playtimeBonus).toFixed(1));
-};
+import { calculateScore, getWastedTimeStatus } from '../lib/utils';
 
 export default function Home() {
   const [featuredGame, setFeaturedGame] = useState(null);
@@ -92,7 +85,8 @@ export default function Home() {
   const genresCount = 4;
   const perfectTrendingGames = trendingGames.slice(0, trendingItemsPerPage * trendingSlidesCount);
 
-  const featuredScore = calculateScore(featuredGame);
+  const featuredScore = featuredGame ? calculateScore(featuredGame) : 0;
+  const featuredStatus = getWastedTimeStatus(featuredScore);
 
   // Helper para o badge do Featured Game (mesma lógica dos cards)
   const getBadgeIcon = (score) => {
@@ -126,8 +120,8 @@ export default function Home() {
           </div>
           
           <div className="relative z-10 p-8 md:p-12 max-w-2xl">
-            <div className="inline-block px-3 py-1 mb-4 rounded-full bg-primary/20 text-primary border border-primary/30 text-sm font-bold uppercase tracking-wider backdrop-blur-md">
-              Featured Game
+            <div className={`inline-block px-3 py-1 mb-4 rounded-full ${featuredStatus.bg} ${featuredStatus.color} border ${featuredStatus.border} text-sm font-bold uppercase tracking-wider backdrop-blur-md`}>
+              Featured Game: {featuredStatus.label}
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-white mb-4 drop-shadow-lg leading-tight">
               {featuredGame.name}
@@ -140,7 +134,7 @@ export default function Home() {
               <button className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors shadow-lg shadow-white/10">
                 View Details
               </button>
-              <div className="flex items-center gap-2 px-4 py-3 glass rounded-lg text-white font-semibold" title={`Playtime: ${featuredGame?.playtime || 0}h`}>
+              <div className={`flex items-center gap-2 px-4 py-3 glass rounded-lg font-semibold ${featuredStatus.color}`} title={`Playtime: ${featuredGame?.playtime || 0}h`}>
                 <span className="text-2xl leading-none">{featuredBadge}</span>
                 Score {featuredScore}
               </div>

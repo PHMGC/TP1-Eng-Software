@@ -188,6 +188,7 @@ export default function GameDetails() {
               src={`/hourglass-${status.hourglassLevel}.svg`}
               alt={`Hourglass ${status.hourglassLevel}`}
               className="mb-1 h-8 w-8"
+              style={{ filter: status.filter }}
             />
             <span className={`font-black ${status.color} text-lg`}>{status.label}</span>
             <span className="text-xs text-gray-400 max-w-[120px] text-center">{status.desc}</span>

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { getWastedTimeStatus } from '../lib/utils';
+import { getWastedTimeStatus, calculateScore } from '../lib/utils';
 
 
 export default function GameCard({ game }) {
@@ -17,13 +17,7 @@ export default function GameCard({ game }) {
 
   const imageUrl = game.background_image || 'https://via.placeholder.com/400x225?text=Sem+Imagem';
 
-  // A formula única do WastedHours: Nota base (x1.5 = max 7.5) + Bônus de tempo (max 2.5 pra +50h)
-  const calculateScore = () => {
-    const base = rating * 1.5;
-    const playtimeBonus = Math.min(2.5, (game.playtime || 0) / 20);
-    return (base + playtimeBonus).toFixed(1);
-  };
-  const finalScore = calculateScore();
+  const finalScore = calculateScore(game);
   const status = getWastedTimeStatus(finalScore);
 
   function getBadgeIcon(score) {
@@ -119,6 +113,7 @@ export default function GameCard({ game }) {
           src={`/hourglass-${status.hourglassLevel}.svg`}
           alt={`Hourglass ${status.hourglassLevel}`}
           className="h-4 w-4"
+          style={{ filter: status.filter }}
         />
         <span className={`text-sm font-bold ${status.color}`}>{finalScore}</span>
       </div>
