@@ -18,12 +18,53 @@ export default function GamesCatalog() {
 
   const filters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams]);
 
+  const getPageInfo = () => {
+    if (filters.maxPlaytime === '10' && (filters.sort === 'wasted_score' || filters.sort === 'playtime_asc')) {
+      return {
+        title: 'Quick Sessions',
+        desc: 'Short experiences for when you have an hour or two. Fast-paced or bite-sized games that respect your time.'
+      };
+    }
+    if (filters.minPlaytime === '40' && filters.sort === 'playtime_desc') {
+      return {
+        title: 'Long Playtime',
+        desc: 'Epic journeys that last for dozens of hours. Perfect for getting lost in another world.'
+      };
+    }
+    if (filters.sort === 'trending') {
+      return {
+        title: 'Trending Games',
+        desc: 'The most popular and discussed titles in the community right now.'
+      };
+    }
+    if (filters.sort === 'rating_desc') {
+      return {
+        title: 'Top Rated',
+        desc: 'The highest quality titles as judged by players across the globe.'
+      };
+    }
+    if (filters.sort === 'name_asc') {
+      return {
+        title: 'A to Z Catalog',
+        desc: 'Browse our entire library in alphabetical order.'
+      };
+    }
+    return {
+      title: 'Games Catalog',
+      desc: 'Explore our complete library of games and find your next favorite adventure.'
+    };
+  };
+
+  const pageInfo = getPageInfo();
+
   const updateFilters = (patch, resetPage = false) => {
     const next = {
       ...filters,
       ...patch,
-      page: resetPage ? 1 : filters.page,
     };
+    if (resetPage) {
+      next.page = 1;
+    }
     setSearchParams(buildSearchParamsFromFilters(next));
   };
 
@@ -72,10 +113,13 @@ export default function GamesCatalog() {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-gray-800 pb-4">
         <div>
-          <h1 className="text-3xl font-black text-white">Games</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            {meta.total} games found
+          <h1 className="text-3xl font-black text-white">{pageInfo.title}</h1>
+          <p className="text-sm text-gray-400 mt-1 max-w-2xl">
+            {pageInfo.desc}
           </p>
+        </div>
+        <div className="text-sm font-medium bg-surface/50 border border-gray-800 px-3 py-1 rounded-full text-gray-400">
+          {meta.total} games
         </div>
       </div>
 

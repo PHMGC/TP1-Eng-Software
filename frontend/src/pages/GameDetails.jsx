@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X } from 'lucide-react';
 import { getWastedTimeStatus } from '../lib/utils';
@@ -7,6 +7,7 @@ import { getWastedTimeStatus } from '../lib/utils';
 
 export default function GameDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -163,10 +164,13 @@ export default function GameDetails() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-20">
-      <Link to="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 hover:-translate-x-1 transition-transform bg-surface/50 border border-gray-800 rounded-lg px-4 py-2">
+      <button 
+        onClick={() => navigate(-1)} 
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 hover:-translate-x-1 transition-transform bg-surface/50 border border-gray-800 rounded-lg px-4 py-2 cursor-pointer"
+      >
         <ArrowLeft size={18} />
-        All Games
-      </Link>
+        Back
+      </button>
 
       <div className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div>

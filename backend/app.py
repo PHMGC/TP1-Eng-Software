@@ -31,25 +31,6 @@ def get_status():
     })
 
 
-def get_total_ratings(game):
-    if not game.ratings_distribution: return 0
-    try:
-        dist = game.ratings_distribution
-        if isinstance(dist, str):
-            dist = json.loads(dist)
-        return sum(r.get('count', 0) for r in dist)
-    except:
-        return 0
-
-def imdb_score(game):
-    v = get_total_ratings(game)
-    R = game.rating or 0
-    if v == 0:
-        return R * 0.1
-    C = 3.5
-    m = 500
-    return (v / (v + m)) * R + (m / (v + m)) * C
-
 def wasted_score(game):
     rating = game.rating or 0
     base = rating * 1.5
@@ -107,10 +88,14 @@ def get_games():
     if max_rating is not None:
         games = [g for g in games if (g.rating or 0) <= max_rating]
 
+    # Apply strict playtime filtering if any playtime filter is present or sorting by playtime
+    if min_playtime is not None or max_playtime is not None or sort_by in ['playtime_asc', 'playtime_desc']:
+        games = [g for g in games if g.playtime and g.playtime > 0]
+
     if min_playtime is not None:
-        games = [g for g in games if (g.playtime or 0) >= min_playtime]
+        games = [g for g in games if g.playtime >= min_playtime]
     if max_playtime is not None:
-        games = [g for g in games if (g.playtime or 0) <= max_playtime]
+        games = [g for g in games if g.playtime <= max_playtime]
 
     # Sorting logic
     if sort_by == 'trending':
@@ -126,28 +111,32 @@ def get_games():
     elif sort_by == 'rating_asc':
         games.sort(key=lambda g: g.rating or 0)
     elif sort_by == 'playtime_desc':
-        games.sort(key=lambda g: g.playtime or 0, reverse=True)
+        games.sort(key=lambda g: (g.playtime or 0, g.id), reverse=True)
     elif sort_by == 'playtime_asc':
-        games.sort(key=lambda g: g.playtime or 0)
+        games.sort(key=lambda g: (g.playtime or 0, g.id))
     elif sort_by == 'name_asc':
-        games.sort(key=lambda g: (g.name or '').lower())
+        games.sort(key=lambda g: ((g.name or '').lower(), g.id))
     elif sort_by == 'name_desc':
-        games.sort(key=lambda g: (g.name or '').lower(), reverse=True)
+        games.sort(key=lambda g: ((g.name or '').lower(), g.id), reverse=True)
     elif sort_by == 'wasted_score':
-        games.sort(key=wasted_score, reverse=True)
+        games.sort(key=lambda g: (wasted_score(g), g.id), reverse=True)
     else:
         # Default ranking using Wasted Hours Score (Purple -> Blue -> Gray)
-        games.sort(key=wasted_score, reverse=True)
+        games.sort(key=lambda g: (wasted_score(g), g.id), reverse=True)
 
     start = ((page - 1) * limit) + offset
     end = start + limit
     paginated = games[start:end]
 
+    total_count = len(games)
+    # Correct pages calculation: we use total_count which is already the size of the filtered pool
+    total_pages = math.ceil(total_count / limit) if limit > 0 else 1
+
     return jsonify({
         'data': [game.to_dict() for game in paginated],
-        'total': len(games),
+        'total': total_count,
         'page': page,
-        'pages': math.ceil((len(games) - offset) / limit) if limit > 0 else 1,
+        'pages': total_pages,
         'filters': {
             'search': search or None,
             'sort': sort_by or None
@@ -165,7 +154,7 @@ def search_games():
         return jsonify({'error': 'query parameter is required'}), 400
 
     games = Game.query.filter(Game.name.ilike(f'%{query}%')).all()
-    games.sort(key=imdb_score, reverse=True)
+    games.sort(key=wasted_score, reverse=True)
     paginated = games[offset:offset + limit]
 
     return jsonify({
@@ -183,34 +172,44 @@ def filter_games():
     platform_name = request.args.get('platform', '').strip().lower()
     rating_min = request.args.get('rating_min', type=float)
     rating_max = request.args.get('rating_max', type=float)
+    min_playtime = request.args.get('minPlaytime', type=int)
+    max_playtime = request.args.get('maxPlaytime', type=int)
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
-    
+
     games = Game.query.all()
-    
+
     if genre_name:
         # More robust genre matching - check both name and slug
         games = [g for g in games if any(
-            genre_name in gen.name.lower() or genre_name in gen.slug.lower() 
+            genre_name in gen.name.lower() or genre_name in gen.slug.lower()
             for gen in g.genres
         )]
-    
+
     if platform_name:
         # More robust platform matching - check both name and slug
         games = [g for g in games if any(
             platform_name in plat.name.lower() or platform_name in plat.slug.lower()
             for plat in g.platforms
         )]
-    
+
     if rating_min is not None:
         games = [g for g in games if g.rating and g.rating >= rating_min]
-    
+
     if rating_max is not None:
         games = [g for g in games if g.rating and g.rating <= rating_max]
-    
-    games.sort(key=imdb_score, reverse=True)
-    paginated = games[offset:offset + limit]
-    
+
+    # Apply strict playtime filtering if any playtime filter is present
+    if request.args.get('minPlaytime') or request.args.get('maxPlaytime'):
+        games = [g for g in games if g.playtime and g.playtime > 0]
+        
+    if min_playtime is not None:
+        games = [g for g in games if g.playtime >= min_playtime]
+    if max_playtime is not None:
+        games = [g for g in games if g.playtime <= max_playtime]
+
+    games.sort(key=wasted_score, reverse=True)
+    paginated = games[offset:offset + limit]    
     return jsonify({
         'data': [game.to_dict() for game in paginated],
         'total': len(games),

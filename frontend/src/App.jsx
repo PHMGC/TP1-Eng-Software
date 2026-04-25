@@ -14,7 +14,7 @@ const sidebarLinks = [
   { label: 'Trending', to: '/games?sort=trending' },
   { label: 'Top Rated', to: '/games?sort=rating_desc' },
   { label: 'Long Playtime', to: '/games?sort=playtime_desc&minPlaytime=40' },
-  { label: 'Quick Sessions', to: '/games?sort=playtime_asc&maxPlaytime=10' },
+  { label: 'Quick Sessions', to: '/games?sort=wasted_score&maxPlaytime=10' },
   { label: 'A to Z', to: '/games?sort=name_asc' },
 ];
 

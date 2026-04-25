@@ -15,6 +15,8 @@ export const parseFiltersFromSearchParams = (searchParams) => ({
   search: searchParams.get('search') || '',
   genre: searchParams.get('genre') || '',
   sort: searchParams.get('sort') || 'wasted_score',
+  minPlaytime: searchParams.get('minPlaytime') || '',
+  maxPlaytime: searchParams.get('maxPlaytime') || '',
   page: Math.max(1, Number(searchParams.get('page')) || 1),
   limit: DEFAULT_LIMIT,
 });
@@ -25,6 +27,8 @@ export const buildSearchParamsFromFilters = (filters) => {
     ['search', filters.search],
     ['genre', filters.genre],
     ['sort', filters.sort],
+    ['minPlaytime', filters.minPlaytime],
+    ['maxPlaytime', filters.maxPlaytime],
     ['page', filters.page],
     ['limit', DEFAULT_LIMIT],
   ];
