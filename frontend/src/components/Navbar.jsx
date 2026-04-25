@@ -61,7 +61,7 @@ export default function Navbar({ onOpenSidebar }) {
           <button
             type="button"
             onClick={onOpenSidebar}
-            className="inline-flex items-center justify-center rounded-lg border border-gray-800 bg-surface/30 p-2 text-gray-300 hover:text-white hover:bg-surface transition-colors"
+            className="inline-flex items-center justify-center rounded-lg border border-gray-800 bg-surface/30 p-2 text-gray-300 hover:text-white hover:bg-surface transition-colors cursor-pointer"
             aria-label="Open catalog menu"
           >
             <Menu size={20} />

@@ -1,6 +1,7 @@
 export const DEFAULT_LIMIT = 20;
 
 export const SORT_OPTIONS = [
+  { value: 'wasted_score', label: 'Wasted Score (Best First)' },
   { value: 'trending', label: 'Trending' },
   { value: 'rating_desc', label: 'Rating: High to Low' },
   { value: 'rating_asc', label: 'Rating: Low to High' },
@@ -13,7 +14,7 @@ export const SORT_OPTIONS = [
 export const parseFiltersFromSearchParams = (searchParams) => ({
   search: searchParams.get('search') || '',
   genre: searchParams.get('genre') || '',
-  sort: searchParams.get('sort') || 'top',
+  sort: searchParams.get('sort') || 'wasted_score',
   page: Math.max(1, Number(searchParams.get('page')) || 1),
   limit: DEFAULT_LIMIT,
 });
