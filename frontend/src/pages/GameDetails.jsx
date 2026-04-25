@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X } from 'lucide-react';
+import { getWastedTimeStatus } from '../lib/utils';
+
 
 export default function GameDetails() {
   const { id } = useParams();
@@ -154,12 +156,10 @@ export default function GameDetails() {
 
   const cleanDesc = getCleanDescription(game.description);
   
-  function getBadge(r, reviews) {
-    if (r >= 4.0 && reviews >= 500) return { icon: "🤩", text: "Masterpiece", desc: "Sleep is for the weak" };
-    if (r < 3.5 || reviews < 50) return { icon: "🛌", text: "Sleep Fest", desc: "Certified snooze fest" };
-    return { icon: "👍", text: "Solid Game", desc: "Worth your time" };
-  }
-  const statusBadge = getBadge(game.rating, reviewsCount);
+  const baseScore = (game.rating || 0) * 1.5;
+  const playtimeBonus = Math.min(2.5, (game.playtime || 0) / 20);
+  const finalScore = (baseScore + playtimeBonus).toFixed(1);
+  const status = getWastedTimeStatus(finalScore);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-20">
@@ -182,11 +182,15 @@ export default function GameDetails() {
           </div>
         </div>
         
-        {statusBadge && (
-          <div className="glass px-6 py-4 rounded-2xl border-gray-700 flex flex-col items-center justify-center shrink-0">
-            <span className="text-3xl mb-1">{statusBadge.icon}</span>
-            <span className="font-black text-white text-lg">{statusBadge.text}</span>
-            <span className="text-xs text-gray-400 max-w-[120px] text-center">{statusBadge.desc}</span>
+        {status && (
+          <div className={`glass px-6 py-4 rounded-2xl border ${status.border} ${status.bg} flex flex-col items-center justify-center shrink-0`}>
+            <img
+              src={`/hourglass-${status.hourglassLevel}.svg`}
+              alt={`Hourglass ${status.hourglassLevel}`}
+              className="mb-1 h-8 w-8"
+            />
+            <span className={`font-black ${status.color} text-lg`}>{status.label}</span>
+            <span className="text-xs text-gray-400 max-w-[120px] text-center">{status.desc}</span>
           </div>
         )}
       </div>

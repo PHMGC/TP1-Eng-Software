@@ -1,9 +1,9 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, MonitorPlay, User, Heart, Star } from 'lucide-react';
+import { Search, Hourglass, User, Heart, Star, Menu } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import api from '../lib/api';
 
-export default function Navbar() {
+export default function Navbar({ onOpenSidebar }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -57,10 +57,20 @@ export default function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 text-primary hover:text-primaryHover transition-colors">
-          <MonitorPlay size={28} className="text-primary" />
-          <span className="text-xl font-bold tracking-tight text-white">WastedHours</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onOpenSidebar}
+            className="inline-flex items-center justify-center rounded-lg border border-gray-800 bg-surface/30 p-2 text-gray-300 hover:text-white hover:bg-surface transition-colors"
+            aria-label="Open catalog menu"
+          >
+            <Menu size={20} />
+          </button>
+          <Link to="/" className="flex items-center gap-2 text-primary hover:text-primaryHover transition-colors">
+            <Hourglass size={28} className="text-primary" />
+            <span className="text-xl font-bold tracking-tight text-white">WastedHours</span>
+          </Link>
+        </div>
         
         {/* Search */}
         <div className="hidden md:flex flex-1 max-w-md mx-8 relative" ref={searchRef}>

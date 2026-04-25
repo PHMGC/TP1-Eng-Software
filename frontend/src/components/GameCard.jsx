@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
+import { getWastedTimeStatus } from '../lib/utils';
+
 
 export default function GameCard({ game }) {
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -22,6 +24,7 @@ export default function GameCard({ game }) {
     return (base + playtimeBonus).toFixed(1);
   };
   const finalScore = calculateScore();
+  const status = getWastedTimeStatus(finalScore);
 
   function getBadgeIcon(score) {
     if (score >= 8.5) return "🤩";
@@ -111,12 +114,14 @@ export default function GameCard({ game }) {
         </h3>
 
         {/* Info badges */}
-        <div className="flex items-center mt-auto">
-          <div className="flex items-center gap-2 justify-center bg-surfaceHover px-2.5 py-1 rounded-md border border-gray-800/50" title={`Rating: ${rating.toFixed(1)} / Playtime: ${game.playtime || 0}h`}>
-            <span className="text-lg leading-none">{badgeIcon}</span>
-            <span className="text-sm font-bold text-gray-300">{finalScore}</span>
-          </div>
-        </div>
+      <div className={`flex items-center gap-2 justify-center px-2.5 py-1 rounded-md border ${status.bg} ${status.border}`} title={`Score: ${finalScore}`}>
+        <img
+          src={`/hourglass-${status.hourglassLevel}.svg`}
+          alt={`Hourglass ${status.hourglassLevel}`}
+          className="h-4 w-4"
+        />
+        <span className={`text-sm font-bold ${status.color}`}>{finalScore}</span>
+      </div>
       </div>
     </Link>
   );

@@ -52,29 +52,82 @@ def imdb_score(game):
 
 @app.route('/api/games', methods=['GET'])
 def get_games():
-    """List, search, or sort games. Params: page, limit, offset, search, sort."""
-    page = int(request.args.get('page', 1))
-    limit = int(request.args.get('limit', 20))
-    offset = int(request.args.get('offset', 0))
-    search = request.args.get('search', '').strip()
-    sort = request.args.get('sort', '').strip().lower()
+    """List, search, filter or sort games. Params: page, limit, offset, search, genre, sort, minRating, maxRating, minPlaytime, maxPlaytime."""
+    page = max(1, int(request.args.get('page', 1)))
+    limit = max(1, int(request.args.get('limit', 20)))
+    offset = max(0, int(request.args.get('offset', 0)))
+    search = request.args.get('search', '').strip().lower()
+    genre = request.args.get('genre', '').strip().lower()
+    sort_by = request.args.get('sort', '').strip().lower()
+    min_rating = request.args.get('minRating')
+    max_rating = request.args.get('maxRating')
+    min_playtime = request.args.get('minPlaytime')
+    max_playtime = request.args.get('maxPlaytime')
 
+    def parse_numeric(value):
+        if value is None or value == '':
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    min_rating = parse_numeric(min_rating)
+    max_rating = parse_numeric(max_rating)
+    min_playtime = parse_numeric(min_playtime)
+    max_playtime = parse_numeric(max_playtime)
+
+    # Initial query
+    query = Game.query
+
+    # Database level filtering for search if provided (efficiency)
     if search:
-        games = Game.query.filter(Game.name.ilike(f'%{search}%')).all()
-    elif sort == 'trending':
-        six_months_ago = date.today() - timedelta(days=183)
-        games = Game.query.filter(
-            Game.released.isnot(None),
-            Game.released >= six_months_ago
-        ).all()
-        if len(games) < limit + offset:
-            games = Game.query.filter(Game.released.isnot(None)).order_by(Game.released.desc()).all()
-    elif sort == 'top_rated':
-        games = Game.query.filter(Game.rating.isnot(None)).order_by(Game.rating.desc()).all()
-    else:
-        games = Game.query.all()
+        query = query.filter(Game.name.ilike(f'%{search}%'))
 
-    if sort != 'top_rated':
+    games = query.all()
+
+    # In-memory filtering for more complex relations or conditions
+    if genre:
+        games = [
+            g for g in games
+            if any(
+                genre in gen.name.lower() or (gen.slug and genre in gen.slug.lower())
+                for gen in g.genres
+            )
+        ]
+
+    if min_rating is not None:
+        games = [g for g in games if (g.rating or 0) >= min_rating]
+    if max_rating is not None:
+        games = [g for g in games if (g.rating or 0) <= max_rating]
+
+    if min_playtime is not None:
+        games = [g for g in games if (g.playtime or 0) >= min_playtime]
+    if max_playtime is not None:
+        games = [g for g in games if (g.playtime or 0) <= max_playtime]
+
+    # Sorting logic
+    if sort_by == 'trending':
+        six_months_ago = date.today() - timedelta(days=183)
+        recent = [g for g in games if g.released and g.released >= six_months_ago]
+        if len(recent) < limit + offset:
+            recent = sorted([g for g in games if g.released], key=lambda x: x.released, reverse=True)
+        games = recent
+        games.sort(key=imdb_score, reverse=True)
+    elif sort_by == 'top_rated' or sort_by == 'rating_desc':
+        games.sort(key=lambda g: g.rating or 0, reverse=True)
+    elif sort_by == 'rating_asc':
+        games.sort(key=lambda g: g.rating or 0)
+    elif sort_by == 'playtime_desc':
+        games.sort(key=lambda g: g.playtime or 0, reverse=True)
+    elif sort_by == 'playtime_asc':
+        games.sort(key=lambda g: g.playtime or 0)
+    elif sort_by == 'name_asc':
+        games.sort(key=lambda g: (g.name or '').lower())
+    elif sort_by == 'name_desc':
+        games.sort(key=lambda g: (g.name or '').lower(), reverse=True)
+    else:
+        # Default and backwards-compatible ranking using IMDB score
         games.sort(key=imdb_score, reverse=True)
 
     start = ((page - 1) * limit) + offset
