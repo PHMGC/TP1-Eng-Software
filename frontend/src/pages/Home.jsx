@@ -5,7 +5,8 @@ import { Trophy, Flame, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { calculateScore, getWastedTimeStatus } from '../lib/utils';
 
 export default function Home() {
-  const [featuredGame, setFeaturedGame] = useState(null);
+  const [featuredGames, setFeaturedGames] = useState([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [trendingGames, setTrendingGames] = useState([]);
   const [catalogGames, setCatalogGames] = useState([]);
   const [allGenres, setAllGenres] = useState([]);
@@ -16,7 +17,14 @@ export default function Home() {
   const [activeTrendingSlide, setActiveTrendingSlide] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-
+  // Auto-advance hero carousel
+  useEffect(() => {
+    if (featuredGames.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex(prev => (prev + 1) % featuredGames.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [featuredGames.length]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -34,13 +42,16 @@ export default function Home() {
     async function fetchGames() {
       setLoading(true);
       try {
-        if (!featuredGame) {
+        if (featuredGames.length === 0) {
           const topResponse = await api.get(`/games?page=1&limit=30&sort=trending`);
           const topData = topResponse.data.data;
-          // Ordena tudo do trending pela nossa métrica customizada primeiro
+          // Já vem ordenado do backend, mas garantimos aqui também
           const sortedTrending = topData.sort((a, b) => parseFloat(calculateScore(b)) - parseFloat(calculateScore(a)));
-          if (sortedTrending.length > 0) setFeaturedGame(sortedTrending[0]);
-          setTrendingGames(sortedTrending.slice(1));
+          
+          if (sortedTrending.length > 0) {
+            setFeaturedGames(sortedTrending.slice(0, 5));
+            setTrendingGames(sortedTrending.slice(5));
+          }
         }
 
         const response = await api.get(`/games?page=1&limit=50`);
@@ -54,7 +65,7 @@ export default function Home() {
       }
     }
     fetchGames();
-  }, [featuredGame]);
+  }, [featuredGames.length]);
 
   useEffect(() => {
     async function fetchGenres() {
@@ -85,6 +96,7 @@ export default function Home() {
   const genresCount = 4;
   const perfectTrendingGames = trendingGames.slice(0, trendingItemsPerPage * trendingSlidesCount);
 
+  const featuredGame = featuredGames[currentHeroIndex];
   const featuredScore = featuredGame ? calculateScore(featuredGame) : 0;
   const featuredStatus = getWastedTimeStatus(featuredScore);
 
@@ -106,38 +118,97 @@ export default function Home() {
         </div>
       )}
 
-      {/* Hero Section (Steam-like Featured Game) */}
-      {featuredGame && (
-        <section className="relative rounded-2xl overflow-hidden glass border-gray-800 shadow-2xl group cursor-pointer" onClick={() => window.location.href = `/game/${featuredGame.id}`}>
-          <div className="absolute inset-0">
-            <img 
-              src={featuredGame.background_image} 
-              alt={featuredGame.name} 
-              className="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
+      {/* Hero Section (Steam-like Carousel) */}
+      {featuredGames.length > 0 && (
+        <section className="relative rounded-2xl overflow-hidden glass border-gray-800 shadow-2xl group h-[500px] md:h-[600px]">
+          {/* Sliding Container */}
+          <div 
+            className="flex h-full transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]"
+            style={{ transform: `translateX(-${currentHeroIndex * 100}%)` }}
+          >
+            {featuredGames.map((game, idx) => {
+              const score = calculateScore(game);
+              const status = getWastedTimeStatus(score);
+              const badge = getBadgeIcon(parseFloat(score));
+
+              return (
+                <div 
+                  key={game.id}
+                  className="w-full h-full shrink-0 relative cursor-pointer"
+                  onClick={() => window.location.href = `/game/${game.id}`}
+                >
+                  {/* Background Image */}
+                  <div className="absolute inset-0">
+                    <img 
+                      src={game.background_image} 
+                      alt={game.name} 
+                      className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent w-full md:w-3/4" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative z-10 p-8 md:p-12 h-full flex flex-col justify-end max-w-2xl pointer-events-none">
+                    <div className="mb-auto">
+                      <div className={`inline-block px-3 py-1 mb-4 rounded-full ${status.bg} ${status.color} border ${status.border} text-sm font-bold uppercase tracking-wider backdrop-blur-md`}>
+                        Trending Now: {status.label}
+                      </div>
+                      <h1 className="text-4xl md:text-6xl font-black text-white mb-4 drop-shadow-lg leading-tight">
+                        {game.name}
+                      </h1>
+                      <div className="text-gray-300 text-lg mb-8 line-clamp-3 prose prose-invert drop-shadow-md">
+                        {game.description ? <div dangerouslySetInnerHTML={{ __html: game.description }} /> : 'An interactive masterpiece that defined a generation.'}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 items-center pointer-events-auto">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); window.location.href = `/game/${game.id}`; }}
+                        className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors shadow-lg shadow-white/10"
+                      >
+                        View Details
+                      </button>
+                      <div className={`flex items-center gap-2 px-4 py-3 glass rounded-lg font-semibold ${status.color}`} title={`Playtime: ${game?.playtime || 0}h`}>
+                        <span className="text-2xl leading-none">{badge}</span>
+                        Score {score}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          
-          <div className="relative z-10 p-8 md:p-12 max-w-2xl">
-            <div className={`inline-block px-3 py-1 mb-4 rounded-full ${featuredStatus.bg} ${featuredStatus.color} border ${featuredStatus.border} text-sm font-bold uppercase tracking-wider backdrop-blur-md`}>
-              Featured Game: {featuredStatus.label}
+
+          {/* Carousel Navigation Dots */}
+          <div className="absolute bottom-6 right-8 z-20 flex items-center gap-4">
+            <div className="flex gap-2">
+              {featuredGames.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentHeroIndex(idx)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    currentHeroIndex === idx 
+                      ? 'bg-primary w-8 shadow-[0_0_10px_rgba(99,102,241,0.8)]' 
+                      : 'bg-white/20 hover:bg-white/40'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
             </div>
-            <h1 className="text-4xl md:text-6xl font-black text-white mb-4 drop-shadow-lg leading-tight">
-              {featuredGame.name}
-            </h1>
-            <div className="text-gray-300 text-lg mb-8 line-clamp-3 prose prose-invert">
-              {featuredGame.description ? <div dangerouslySetInnerHTML={{ __html: featuredGame.description }} /> : 'An interactive masterpiece that defined a generation.'}
-            </div>
-            
-            <div className="flex flex-wrap gap-4 items-center">
-              <button className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors shadow-lg shadow-white/10">
-                View Details
+            <div className="flex gap-2 ml-4">
+              <button 
+                onClick={() => setCurrentHeroIndex(prev => (prev - 1 + featuredGames.length) % featuredGames.length)}
+                className="p-2 bg-surface/60 hover:bg-primary text-white rounded-full transition-all border border-white/10"
+              >
+                <ChevronLeft size={20} />
               </button>
-              <div className={`flex items-center gap-2 px-4 py-3 glass rounded-lg font-semibold ${featuredStatus.color}`} title={`Playtime: ${featuredGame?.playtime || 0}h`}>
-                <span className="text-2xl leading-none">{featuredBadge}</span>
-                Score {featuredScore}
-              </div>
+              <button 
+                onClick={() => setCurrentHeroIndex(prev => (prev + 1) % featuredGames.length)}
+                className="p-2 bg-surface/60 hover:bg-primary text-white rounded-full transition-all border border-white/10"
+              >
+                <ChevronRight size={20} />
+              </button>
             </div>
           </div>
         </section>
