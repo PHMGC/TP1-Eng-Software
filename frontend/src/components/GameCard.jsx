@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { getWastedTimeStatus, calculateScore } from '../lib/utils';
 
 
 export default function GameCard({ game }) {
+  const auth = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
@@ -29,23 +31,25 @@ export default function GameCard({ game }) {
 
   // Check if game is in wishlist on mount
   useEffect(() => {
-    async function checkWishlistStatus() {
-      try {
-        const response = await api.get('/wishlist');
-        const inWishlist = response.data.some(item => item.game_id === game.id);
-        setIsInWishlist(inWishlist);
-      } catch (err) {
-        console.error('Error checking wishlist status:', err);
+    if (auth.isAuthenticated) {
+      async function checkWishlistStatus() {
+        try {
+          const response = await api.get('/wishlist');
+          const inWishlist = response.data.some(item => item.game_id === game.id);
+          setIsInWishlist(inWishlist);
+        } catch (err) {
+          console.error('Error checking wishlist status:', err);
+        }
       }
+      checkWishlistStatus();
     }
-    checkWishlistStatus();
-  }, [game.id]);
+  }, [game.id, auth.isAuthenticated]);
 
   const handleWishlistToggle = async (e) => {
     e.preventDefault(); // Prevent navigation to game details
     e.stopPropagation();
 
-    if (wishlistLoading) return;
+    if (wishlistLoading || !auth.isAuthenticated) return;
 
     setWishlistLoading(true);
     try {
@@ -58,6 +62,8 @@ export default function GameCard({ game }) {
       }
     } catch (err) {
       console.error('Error updating wishlist:', err);
+      // Show error to user
+      alert('Failed to update wishlist. Please try again.');
     } finally {
       setWishlistLoading(false);
     }
@@ -77,28 +83,30 @@ export default function GameCard({ game }) {
         <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-80" />
 
         {/* Wishlist Button */}
-        <button
-          onClick={handleWishlistToggle}
-          disabled={wishlistLoading}
-          className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 ${
-            isInWishlist
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-black/50 hover:bg-black/70 text-gray-300 hover:text-white'
-          } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={isInWishlist ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill={isInWishlist ? 'currentColor' : 'none'}
-            stroke="currentColor"
-            strokeWidth="2"
-            className="transition-all"
+        {auth.isAuthenticated && (
+          <button
+            onClick={handleWishlistToggle}
+            disabled={wishlistLoading}
+            className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 ${
+              isInWishlist
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-black/50 hover:bg-black/70 text-gray-300 hover:text-white'
+            } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={isInWishlist ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'}
           >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </button>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill={isInWishlist ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth="2"
+              className="transition-all"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Content */}

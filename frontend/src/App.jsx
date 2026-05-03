@@ -7,7 +7,10 @@ import SearchResults from './pages/SearchResults';
 import Wishlist from './pages/Wishlist';
 import Profile from './pages/Profile';
 import GamesCatalog from './pages/GamesCatalog';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import { X } from 'lucide-react';
+import { AuthProvider, useAuth } from './lib/auth';
 
 const sidebarLinks = [
   { label: 'All Games', to: '/games' },
@@ -17,6 +20,11 @@ const sidebarLinks = [
   { label: 'Quick Sessions', to: '/games?sort=wasted_score&maxPlaytime=10' },
   { label: 'A to Z', to: '/games?sort=name_asc' },
 ];
+
+function PrivateRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
 
 function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -71,8 +79,10 @@ function AppLayout() {
             <Route path="/games" element={<GamesCatalog />} />
             <Route path="/game/:id" element={<GameDetails />} />
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/wishlist" element={<PrivateRoute><Wishlist /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -89,4 +99,10 @@ function App() {
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}

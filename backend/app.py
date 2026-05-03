@@ -1,12 +1,17 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from models import db, Game, Genre, Platform, Tag, Screenshot, User, Wishlist, Review
 from datetime import datetime, date, timedelta
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
 import json
 import math
 import os
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-for-dev')
+app.config['JWT_EXPIRATION_DELTA'] = int(os.environ.get('JWT_EXPIRATION_DELTA', 86400))
 
 # Configuração do Banco de Dados SQLite
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +34,45 @@ def get_status():
         "message": "A API Flask está rodando corretamente!",
         "database": "SQLite conectado"
     })
+
+
+def generate_token(user):
+    payload = {
+        'sub': user.id,
+        'username': user.username,
+        'exp': datetime.utcnow() + timedelta(seconds=app.config['JWT_EXPIRATION_DELTA'])
+    }
+    return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+
+
+def get_authenticated_user():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    token = auth_header.split(' ', 1)[1].strip()
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+    user_id = payload.get('sub')
+    if not user_id:
+        return None
+
+    return User.query.get(user_id)
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_authenticated_user()
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        g.current_user = user
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def wasted_score(game):
@@ -270,6 +314,85 @@ def trending_games():
     })
 
 
+@app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    """Register a new user with username, email and password."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+
+    if not username or not email or not password:
+        return jsonify({'error': 'username, email and password are required'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 409
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already exists'}), 409
+
+    user = User(
+        username=username,
+        email=email,
+        password_hash=generate_password_hash(password)
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Authenticate a user and return a JWT token."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    identifier = data.get('username') or data.get('email')
+    password = data.get('password', '')
+    if not identifier or not password:
+        return jsonify({'error': 'username/email and password are required'}), 400
+
+    user = User.query.filter_by(username=identifier).first()
+    if user is None:
+        user = User.query.filter_by(email=identifier.lower()).first()
+
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    token = generate_token(user)
+    return jsonify({'token': token, 'user': user.to_dict()})
+
+
+@app.route('/api/auth/me', methods=['GET'])
+@login_required
+def get_current_user():
+    return jsonify(g.current_user.to_dict())
+
+
+@app.route('/api/auth/me', methods=['DELETE'])
+@login_required
+def delete_current_user():
+    """Delete the current authenticated user account."""
+    try:
+        # Delete user's reviews
+        Review.query.filter_by(user_id=g.current_user.id).delete()
+
+        # Delete user's wishlist items
+        Wishlist.query.filter_by(user_id=g.current_user.id).delete()
+
+        # Delete the user
+        db.session.delete(g.current_user)
+        db.session.commit()
+
+        return jsonify({'message': 'Account deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete account'}), 500
+
+
 @app.route('/api/genres', methods=['GET'])
 def get_genres():
     """Get all available genres."""
@@ -400,29 +523,28 @@ def delete_game(game_id):
 
 # Wishlist endpoints
 @app.route('/api/wishlist', methods=['GET'])
+@login_required
 def get_wishlist():
-    """Get user's wishlist. For now uses hardcoded user_id=1."""
-    user_id = 1  # TODO: Get from session/auth when implemented
-    wishlist_items = Wishlist.query.filter_by(user_id=user_id).all()
+    """Get authenticated user's wishlist."""
+    wishlist_items = Wishlist.query.filter_by(user_id=g.current_user.id).all()
     return jsonify([item.to_dict() for item in wishlist_items])
 
 
 @app.route('/api/wishlist', methods=['POST'])
+@login_required
 def add_to_wishlist():
-    """Add game to user's wishlist. Body: {game_id: int}."""
+    """Add game to authenticated user's wishlist. Body: {game_id: int}."""
     data = request.get_json(silent=True)
     if not data or 'game_id' not in data:
         return jsonify({'error': 'game_id is required'}), 400
 
-    user_id = 1  # TODO: Get from session/auth when implemented
     game_id = data['game_id']
+    user_id = g.current_user.id
 
-    # Check if game exists
     game = Game.query.get(game_id)
     if not game:
         return jsonify({'error': 'Game not found'}), 404
 
-    # Check if already in wishlist
     existing = Wishlist.query.filter_by(user_id=user_id, game_id=game_id).first()
     if existing:
         return jsonify({'error': 'Game already in wishlist'}), 409
@@ -435,9 +557,10 @@ def add_to_wishlist():
 
 
 @app.route('/api/wishlist/<int:game_id>', methods=['DELETE'])
+@login_required
 def remove_from_wishlist(game_id):
-    """Remove game from user's wishlist."""
-    user_id = 1  # TODO: Get from session/auth when implemented
+    """Remove game from authenticated user's wishlist."""
+    user_id = g.current_user.id
 
     wishlist_item = Wishlist.query.filter_by(user_id=user_id, game_id=game_id).first()
     if not wishlist_item:
@@ -469,6 +592,7 @@ def get_reviews():
 
 
 @app.route('/api/reviews', methods=['POST'])
+@login_required
 def create_review():
     """Create or update a review. Body: {game_id: int, rating: float, playtime_hours?: int, review_text?: string}."""
     data = request.get_json(silent=True)
@@ -480,24 +604,20 @@ def create_review():
         if field not in data:
             return jsonify({'error': f'{field} is required'}), 400
 
-    user_id = 1  # TODO: Get from session/auth when implemented
+    user_id = g.current_user.id
     game_id = data['game_id']
     rating = data['rating']
 
-    # Validate rating range (1-10)
     if not (1 <= rating <= 10):
         return jsonify({'error': 'Rating must be between 1 and 10'}), 400
 
-    # Check if game exists
     game = Game.query.get(game_id)
     if not game:
         return jsonify({'error': 'Game not found'}), 404
 
-    # Check if review already exists
     existing_review = Review.query.filter_by(user_id=user_id, game_id=game_id).first()
 
     if existing_review:
-        # Update existing review
         existing_review.rating = rating
         if 'playtime_hours' in data:
             existing_review.playtime_hours = data['playtime_hours']
@@ -506,7 +626,6 @@ def create_review():
         db.session.commit()
         return jsonify(existing_review.to_dict())
     else:
-        # Create new review
         review = Review(
             user_id=user_id,
             game_id=game_id,
@@ -520,13 +639,12 @@ def create_review():
 
 
 @app.route('/api/reviews/<int:review_id>', methods=['PUT'])
+@login_required
 def update_review(review_id):
     """Update a review. Body: {rating?: float, playtime_hours?: int, review_text?: string}."""
     review = Review.query.get_or_404(review_id)
 
-    # TODO: Check if user owns this review when auth is implemented
-    user_id = 1  # TODO: Get from session/auth when implemented
-    if review.user_id != user_id:
+    if review.user_id != g.current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
     data = request.get_json(silent=True)
@@ -550,13 +668,12 @@ def update_review(review_id):
 
 
 @app.route('/api/reviews/<int:review_id>', methods=['DELETE'])
+@login_required
 def delete_review(review_id):
     """Delete a review."""
     review = Review.query.get_or_404(review_id)
 
-    # TODO: Check if user owns this review when auth is implemented
-    user_id = 1  # TODO: Get from session/auth when implemented
-    if review.user_id != user_id:
+    if review.user_id != g.current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
     db.session.delete(review)
@@ -565,9 +682,10 @@ def delete_review(review_id):
 
 
 @app.route('/api/games/<int:game_id>/user-review', methods=['GET'])
+@login_required
 def get_user_review_for_game(game_id):
     """Get current user's review for a specific game."""
-    user_id = 1  # TODO: Get from session/auth when implemented
+    user_id = g.current_user.id
 
     review = Review.query.filter_by(user_id=user_id, game_id=game_id).first()
     if not review:

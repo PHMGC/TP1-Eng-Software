@@ -12,9 +12,43 @@ O WastedHours é uma plataforma web voltada para a curadoria, catalogação e av
 ## Tecnologias
 *	**Linguagem**: Python
 *	**Framework Backend**: Flask
-*	**Framework Frontend**: React ?
-*	**Banco de Dados**: PostgreSQL
-*	**Agentes de IA**: Copilot (Gemini e GPT)
+* 	**Banco de Dados**: SQLite (local development)
+* 	**Linguagem Frontend**: JavaScript / React
+* 	**Frontend Build**: Vite
+* 	**Agentes de IA**: Copilot (Gemini e GPT)
+
+## Como executar localmente
+### Backend
+1. Abra um terminal em `backend`
+2. Crie e ative um ambiente virtual Python
+   - Windows PowerShell:
+     ```powershell
+     python -m venv .venv
+     .\.venv\Scripts\Activate.ps1
+     ```
+3. Instale as dependências:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+4. Execute o backend:
+   ```powershell
+   python app.py
+   ```
+5. A API estará disponível em `http://127.0.0.1:5000`
+
+### Frontend
+1. Abra um terminal em `frontend`
+2. Instale dependências npm:
+   ```powershell
+   npm install
+   ```
+3. Execute o frontend:
+   ```powershell
+   npm run dev
+   ```
+4. O site será servido por padrão em `http://localhost:5173`
+
+> Observação: o backend usa um banco de dados SQLite local (`backend/games.db`) para desenvolvimento.
 
 ## Histórias de Usuário
 1.	Como jogador, quero criar uma conta para manter um histórico pessoal dos jogos que possuo.

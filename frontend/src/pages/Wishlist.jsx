@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 import api from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Heart, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function Wishlist() {
+  const auth = useAuth();
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!auth.isAuthenticated) {
+      return;
+    }
+
     async function fetchWishlist() {
       setLoading(true);
       try {
@@ -17,13 +23,14 @@ export default function Wishlist() {
         setWishlistItems(response.data);
       } catch (err) {
         console.error('Error fetching wishlist:', err);
-        setError('Could not load wishlist. Make sure the backend is running.');
+        const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+        setError(`Could not load wishlist: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
     }
     fetchWishlist();
-  }, []);
+  }, [auth.isAuthenticated]);
 
   const handleRemoveFromWishlist = async (gameId) => {
     try {
@@ -35,26 +42,8 @@ export default function Wishlist() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="animate-spin w-8 h-8 text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="animate-in fade-in duration-500 space-y-6">
-        <div className="flex items-center gap-3 text-2xl font-bold text-white mb-6">
-          <Heart className="text-primary" size={28} />
-          Minhas Listas de Desejos
-        </div>
-        <div className="bg-red-950/50 border border-red-900/50 rounded-lg p-4 text-red-200 text-center">
-          {error}
-        </div>
-      </div>
-    );
+  if (!auth.isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
 
   return (

@@ -1,7 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Hourglass, User, Heart, Star, Menu } from 'lucide-react';
+import { Search, Hourglass, User, Heart, Star, Menu, LogOut, LogIn } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import api from '../lib/api';
+import { useAuth } from '../lib/auth';
 
 export default function Navbar({ onOpenSidebar }) {
   const [query, setQuery] = useState('');
@@ -9,6 +10,7 @@ export default function Navbar({ onOpenSidebar }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth();
   const searchRef = useRef(null);
 
   // Fecha o dropdown ao mudar de rota
@@ -138,10 +140,30 @@ export default function Navbar({ onOpenSidebar }) {
           <Link to="/wishlist" className="text-gray-400 hover:text-white transition-colors" title="Lista de Desejos">
             <Heart size={20} />
           </Link>
-          <Link to="/profile" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface">
-            <User size={18} />
-            <span className="text-sm font-medium hidden sm:inline">Perfil</span>
-          </Link>
+          {auth.isAuthenticated ? (
+            <>
+              <Link to="/profile" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface">
+                <User size={18} />
+                <span className="text-sm font-medium hidden sm:inline">Perfil</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  auth.logout();
+                  navigate('/login');
+                }}
+                className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface"
+              >
+                <LogOut size={18} />
+                <span className="text-sm font-medium hidden sm:inline">Sair</span>
+              </button>
+            </>
+          ) : (
+            <Link to="/login" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors border border-gray-800 rounded-full px-3 py-1.5 bg-surface/30 hover:bg-surface">
+              <LogIn size={18} />
+              <span className="text-sm font-medium hidden sm:inline">Entrar</span>
+            </Link>
+          )}
         </div>
 
       </div>

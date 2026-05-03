@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X } from 'lucide-react';
 import { getWastedTimeStatus } from '../lib/utils';
 
@@ -8,6 +9,7 @@ import { getWastedTimeStatus } from '../lib/utils';
 export default function GameDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const auth = useAuth();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +41,7 @@ export default function GameDetails() {
 
   // Check wishlist status when game loads
   useEffect(() => {
-    if (game) {
+    if (game && auth.isAuthenticated) {
       async function checkWishlistStatus() {
         try {
           const response = await api.get('/wishlist');
@@ -51,11 +53,11 @@ export default function GameDetails() {
       }
       checkWishlistStatus();
     }
-  }, [game]);
+  }, [game, auth.isAuthenticated]);
 
   // Check user review when game loads
   useEffect(() => {
-    if (game) {
+    if (game && auth.isAuthenticated) {
       async function fetchUserReview() {
         try {
           const response = await api.get(`/games/${game.id}/user-review`);
@@ -72,10 +74,10 @@ export default function GameDetails() {
       }
       fetchUserReview();
     }
-  }, [game]);
+  }, [game, auth.isAuthenticated]);
 
   const handleWishlistToggle = async () => {
-    if (wishlistLoading || !game) return;
+    if (wishlistLoading || !game || !auth.isAuthenticated) return;
 
     setWishlistLoading(true);
     try {
@@ -88,6 +90,7 @@ export default function GameDetails() {
       }
     } catch (err) {
       console.error('Error updating wishlist:', err);
+      alert('Failed to update wishlist. Please try again.');
     } finally {
       setWishlistLoading(false);
     }
@@ -95,7 +98,7 @@ export default function GameDetails() {
 
   const handleRatingSubmit = async (e) => {
     e.preventDefault();
-    if (ratingLoading || !game) return;
+    if (ratingLoading || !game || !auth.isAuthenticated) return;
 
     setRatingLoading(true);
     try {
@@ -111,6 +114,8 @@ export default function GameDetails() {
       setShowRatingModal(false);
     } catch (err) {
       console.error('Error submitting rating:', err);
+      // Show error to user
+      alert('Failed to submit review. Please try again.');
     } finally {
       setRatingLoading(false);
     }
@@ -321,29 +326,40 @@ export default function GameDetails() {
 
             <h3 className="text-lg font-bold text-white mb-4 border-t border-gray-800 pt-6">Manage on WastedHours</h3>
             <div className="space-y-3">
-              <button
-                onClick={() => setShowRatingModal(true)}
-                className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5"
-              >
-                <Star size={20} />
-                {userReview ? 'Update Review' : 'Rate Game'}
-              </button>
-              <button
-                onClick={handleWishlistToggle}
-                disabled={wishlistLoading}
-                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
-                  isInWishlist
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-surface hover:bg-gray-800 border border-gray-700 text-white'
-                } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {wishlistLoading ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <Heart size={20} className={isInWishlist ? 'fill-current' : ''} />
-                )}
-                {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-              </button>
+              {auth.isAuthenticated && (
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryHover text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary/20 mb-3 hover:-translate-y-0.5"
+                >
+                  <Star size={20} />
+                  {userReview ? 'Update Review' : 'Rate Game'}
+                </button>
+              )}
+              {auth.isAuthenticated && (
+                <button
+                  onClick={handleWishlistToggle}
+                  disabled={wishlistLoading}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
+                    isInWishlist
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-surface hover:bg-gray-800 border border-gray-700 text-white'
+                  } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {wishlistLoading ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <Heart size={20} className={isInWishlist ? 'fill-current' : ''} />
+                  )}
+                  {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                </button>
+              )}
+              {!auth.isAuthenticated && (
+                <div className="w-full text-center py-3.5 px-4 bg-surface border border-gray-700 rounded-xl text-gray-400">
+                  <Link to="/login" className="text-primary hover:text-primaryHover underline">
+                    Sign in to rate and manage games
+                  </Link>
+                </div>
+              )}
             </div>
 
             {game.esrb_rating && (
