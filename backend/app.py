@@ -38,28 +38,41 @@ def get_status():
 
 def generate_token(user):
     payload = {
-        'sub': user.id,
+        'sub': str(user.id),
+        'id': str(user.id),
         'username': user.username,
         'exp': datetime.utcnow() + timedelta(seconds=app.config['JWT_EXPIRATION_DELTA'])
     }
-    return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
+    return token
 
 
 def get_authenticated_user():
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
         return None
+
     token = auth_header.split(' ', 1)[1].strip()
     try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        payload = jwt.decode(
+            token,
+            app.config['SECRET_KEY'],
+            algorithms=['HS256'],
+            options={'verify_sub': False}
+        )
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
         return None
 
-    user_id = payload.get('sub')
+    user_id = payload.get('sub') or payload.get('id')
     if not user_id:
         return None
+
+    if isinstance(user_id, str) and user_id.isdigit():
+        user_id = int(user_id)
 
     return User.query.get(user_id)
 
