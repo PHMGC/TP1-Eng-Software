@@ -46,18 +46,9 @@ export default function GameDetails() {
   // Check wishlist status when game loads
   useEffect(() => {
     if (game && auth.isAuthenticated) {
-      async function checkWishlistStatus() {
-        try {
-          const response = await api.get('/wishlist');
-          const inWishlist = response.data.some(item => item.game_id === game.id);
-          setIsInWishlist(inWishlist);
-        } catch (err) {
-          console.error('Error checking wishlist status:', err);
-        }
-      }
-      checkWishlistStatus();
+      setIsInWishlist(auth.isGameInWishlist(game.id));
     }
-  }, [game, auth.isAuthenticated]);
+  }, [game, auth.isAuthenticated, auth.wishlist]);
 
   // Check library status when game loads
   useEffect(() => {
@@ -124,10 +115,10 @@ export default function GameDetails() {
     try {
       if (isInWishlist) {
         await api.delete(`/wishlist/${game.id}`);
-        setIsInWishlist(false);
+        auth.removeFromWishlist(game.id);
       } else {
         await api.post('/wishlist', { game_id: game.id });
-        setIsInWishlist(true);
+        auth.addToWishlist(game.id);
       }
     } catch (err) {
       console.error('Error updating wishlist:', err);

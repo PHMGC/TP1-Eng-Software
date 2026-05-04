@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import api from './api';
 
 const AUTH_TOKEN_KEY = 'wastedhours_token';
 const AUTH_USER_KEY = 'wastedhours_user';
@@ -47,6 +48,8 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getInitialUser);
   const [token, setToken] = useState(getAuthToken);
+  const [wishlist, setWishlist] = useState([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   useEffect(() => {
     const currentUser = getInitialUser();
@@ -54,6 +57,37 @@ export function AuthProvider({ children }) {
     setUser(currentUser);
     setToken(currentToken);
   }, []);
+
+  useEffect(() => {
+    if (user && token) {
+      fetchWishlist();
+    } else {
+      setWishlist([]);
+    }
+  }, [user, token]);
+
+  const fetchWishlist = async () => {
+    setWishlistLoading(true);
+    try {
+      const response = await api.get('/wishlist');
+      setWishlist(response.data || []);
+    } catch (err) {
+      console.error('Error fetching wishlist:', err);
+      setWishlist([]);
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const addToWishlist = (gameId) => {
+    if (!wishlist.some(item => item.game_id === gameId)) {
+      setWishlist([...wishlist, { game_id: gameId }]);
+    }
+  };
+
+  const removeFromWishlist = (gameId) => {
+    setWishlist(wishlist.filter(item => item.game_id !== gameId));
+  };
 
   const login = (userData, jwtToken) => {
     setUser(userData);
@@ -65,11 +99,28 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setWishlist([]);
     clearAuthStorage();
   };
 
+  const isGameInWishlist = (gameId) => {
+    return wishlist.some(item => item.game_id === gameId);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user && !!token }}>
+    <AuthContext.Provider value={{
+      user,
+      token,
+      login,
+      logout,
+      isAuthenticated: !!user && !!token,
+      wishlist,
+      wishlistLoading,
+      isGameInWishlist,
+      addToWishlist,
+      removeFromWishlist,
+      refreshWishlist: fetchWishlist
+    }}>
       {children}
     </AuthContext.Provider>
   );

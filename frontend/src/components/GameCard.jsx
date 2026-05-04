@@ -29,24 +29,15 @@ export default function GameCard({ game }) {
   }
   const badgeIcon = getBadgeIcon(parseFloat(finalScore));
 
-  // Check if game is in wishlist on mount
+  // Check if game is in wishlist
   useEffect(() => {
     if (auth.isAuthenticated) {
-      async function checkWishlistStatus() {
-        try {
-          const response = await api.get('/wishlist');
-          const inWishlist = response.data.some(item => item.game_id === game.id);
-          setIsInWishlist(inWishlist);
-        } catch (err) {
-          console.error('Error checking wishlist status:', err);
-        }
-      }
-      checkWishlistStatus();
+      setIsInWishlist(auth.isGameInWishlist(game.id));
     }
-  }, [game.id, auth.isAuthenticated]);
+  }, [game.id, auth.isAuthenticated, auth.wishlist]);
 
   const handleWishlistToggle = async (e) => {
-    e.preventDefault(); // Prevent navigation to game details
+    e.preventDefault();
     e.stopPropagation();
 
     if (wishlistLoading || !auth.isAuthenticated) return;
@@ -55,14 +46,13 @@ export default function GameCard({ game }) {
     try {
       if (isInWishlist) {
         await api.delete(`/wishlist/${game.id}`);
-        setIsInWishlist(false);
+        auth.removeFromWishlist(game.id);
       } else {
         await api.post('/wishlist', { game_id: game.id });
-        setIsInWishlist(true);
+        auth.addToWishlist(game.id);
       }
     } catch (err) {
       console.error('Error updating wishlist:', err);
-      // Show error to user
       alert('Failed to update wishlist. Please try again.');
     } finally {
       setWishlistLoading(false);

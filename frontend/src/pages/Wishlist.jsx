@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Heart, ArrowLeft, Loader2 } from 'lucide-react';
+import { Heart, ArrowLeft } from 'lucide-react';
 
 export default function Wishlist() {
   const auth = useAuth();
@@ -13,11 +13,11 @@ export default function Wishlist() {
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
+      setLoading(false);
       return;
     }
 
-    async function fetchWishlist() {
-      setLoading(true);
+    async function fetchWishlistGames() {
       try {
         const response = await api.get('/wishlist');
         setWishlistItems(response.data);
@@ -29,13 +29,17 @@ export default function Wishlist() {
         setLoading(false);
       }
     }
-    fetchWishlist();
-  }, [auth.isAuthenticated]);
+
+    if (auth.wishlist.length > 0 || !auth.wishlistLoading) {
+      fetchWishlistGames();
+    }
+  }, [auth.isAuthenticated, auth.wishlist]);
 
   const handleRemoveFromWishlist = async (gameId) => {
     try {
       await api.delete(`/wishlist/${gameId}`);
       setWishlistItems(prev => prev.filter(item => item.game_id !== gameId));
+      auth.removeFromWishlist(gameId);
     } catch (err) {
       console.error('Error removing from wishlist:', err);
       setError('Could not remove game from wishlist.');
