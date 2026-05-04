@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import GameDetails from './pages/GameDetails';
 import SearchResults from './pages/SearchResults';
 import Wishlist from './pages/Wishlist';
+import Library from './pages/Library';
 import Profile from './pages/Profile';
 import GamesCatalog from './pages/GamesCatalog';
 import Login from './pages/Login';
@@ -80,6 +81,7 @@ function AppLayout() {
             <Route path="/game/:id" element={<GameDetails />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/wishlist" element={<PrivateRoute><Wishlist /></PrivateRoute>} />
+            <Route path="/library" element={<PrivateRoute><Library /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

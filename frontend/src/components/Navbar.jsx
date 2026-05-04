@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Hourglass, User, Heart, Star, Menu, LogOut, LogIn } from 'lucide-react';
+import { Search, Hourglass, User, Heart, BookOpen, Star, Menu, LogOut, LogIn } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -139,6 +139,9 @@ export default function Navbar({ onOpenSidebar }) {
         <div className="flex items-center gap-4">
           <Link to="/wishlist" className="text-gray-400 hover:text-white transition-colors" title="Lista de Desejos">
             <Heart size={20} />
+          </Link>
+          <Link to="/library" className="text-gray-400 hover:text-white transition-colors" title="Minha Biblioteca">
+            <BookOpen size={20} />
           </Link>
           {auth.isAuthenticated ? (
             <>

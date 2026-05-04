@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X, BookOpen } from 'lucide-react';
 import { getWastedTimeStatus } from '../lib/utils';
 
 
@@ -15,6 +15,8 @@ export default function GameDetails() {
   const [error, setError] = useState(null);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [isInLibrary, setIsInLibrary] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
   const [userReview, setUserReview] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingForm, setRatingForm] = useState({
@@ -54,6 +56,24 @@ export default function GameDetails() {
         }
       }
       checkWishlistStatus();
+    }
+  }, [game, auth.isAuthenticated]);
+
+  // Check library status when game loads
+  useEffect(() => {
+    if (game && auth.isAuthenticated) {
+      async function checkLibraryStatus() {
+        try {
+          const response = await api.get('/library');
+          const inLibrary = response.data.some(item => item.game_id === game.id);
+          setIsInLibrary(inLibrary);
+        } catch (err) {
+          console.error('Error checking library status:', err);
+        }
+      }
+      checkLibraryStatus();
+    } else {
+      setIsInLibrary(false);
     }
   }, [game, auth.isAuthenticated]);
 
@@ -114,6 +134,26 @@ export default function GameDetails() {
       alert('Failed to update wishlist. Please try again.');
     } finally {
       setWishlistLoading(false);
+    }
+  };
+
+  const handleLibraryToggle = async () => {
+    if (libraryLoading || !game || !auth.isAuthenticated) return;
+
+    setLibraryLoading(true);
+    try {
+      if (isInLibrary) {
+        await api.delete(`/library/${game.id}`);
+        setIsInLibrary(false);
+      } else {
+        await api.post('/library', { game_id: game.id });
+        setIsInLibrary(true);
+      }
+    } catch (err) {
+      console.error('Error updating library:', err);
+      alert('Failed to update library. Please try again.');
+    } finally {
+      setLibraryLoading(false);
     }
   };
 
@@ -415,12 +455,12 @@ export default function GameDetails() {
               {auth.isAuthenticated && (
                 <button
                   onClick={handleWishlistToggle}
-                  disabled={wishlistLoading}
+                  disabled={wishlistLoading || libraryLoading}
                   className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
                     isInWishlist
                       ? 'bg-red-600 hover:bg-red-700 text-white'
                       : 'bg-surface hover:bg-gray-800 border border-gray-700 text-white'
-                  } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${(wishlistLoading || libraryLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {wishlistLoading ? (
                     <Loader2 size={20} className="animate-spin" />
@@ -428,6 +468,24 @@ export default function GameDetails() {
                     <Heart size={20} className={isInWishlist ? 'fill-current' : ''} />
                   )}
                   {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                </button>
+              )}
+              {auth.isAuthenticated && (
+                <button
+                  onClick={handleLibraryToggle}
+                  disabled={wishlistLoading || libraryLoading}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all hover:-translate-y-0.5 ${
+                    isInLibrary
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-surface hover:bg-gray-800 border border-gray-700 text-white'
+                  } ${(wishlistLoading || libraryLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {libraryLoading ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <BookOpen size={20} className={isInLibrary ? 'fill-current' : ''} />
+                  )}
+                  {isInLibrary ? 'Remover da Biblioteca' : 'Adicionar à Biblioteca'}
                 </button>
               )}
               {!auth.isAuthenticated && (

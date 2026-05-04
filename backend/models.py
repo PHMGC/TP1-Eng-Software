@@ -143,6 +143,7 @@ class User(db.Model):
 
 	# Relationships
 	wishlist_items = db.relationship('Wishlist', backref='user', lazy=True)
+	library_items = db.relationship('Library', backref='user', lazy=True)
 
 	def to_dict(self):
 		return {
@@ -161,6 +162,25 @@ class Wishlist(db.Model):
 
 	# Relationships
 	game = db.relationship('Game', backref='wishlist_entries')
+
+	def to_dict(self):
+		return {
+			'id': self.id,
+			'user_id': self.user_id,
+			'game_id': self.game_id,
+			'added_at': self.added_at.isoformat() if self.added_at else None,
+			'game': self.game.to_dict() if self.game else None
+		}
+
+class Library(db.Model):
+	__tablename__ = 'library'
+	id = db.Column(db.Integer, primary_key=True)
+	user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+	game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+	added_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+	# Relationships
+	game = db.relationship('Game', backref='library_entries')
 
 	def to_dict(self):
 		return {
