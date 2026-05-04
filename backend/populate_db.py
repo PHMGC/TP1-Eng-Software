@@ -1,3 +1,4 @@
+import os
 import urllib.request
 import json
 import time
@@ -6,7 +7,7 @@ from datetime import datetime
 from app import app
 from models import db, Game, Genre, Platform, Tag, Screenshot
 
-RAWG_API_KEY = "b84ad05cc956467aa411bc2d3a7710d4"
+RAWG_API_KEY = os.getenv('RAWG_API_KEY')
 
 def fetch_json(url):
 	# try:

@@ -23,6 +23,8 @@ export default function GameDetails() {
     review_text: ''
   });
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [allReviews, setAllReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => {
     async function fetchGame() {
@@ -75,6 +77,25 @@ export default function GameDetails() {
       fetchUserReview();
     }
   }, [game, auth.isAuthenticated]);
+
+  // Fetch all reviews for the game
+  useEffect(() => {
+    if (game) {
+      async function fetchAllReviews() {
+        setReviewsLoading(true);
+        try {
+          const response = await api.get(`/reviews?game_id=${game.id}&limit=100`);
+          setAllReviews(response.data || []);
+        } catch (err) {
+          console.error('Error fetching reviews:', err);
+          setAllReviews([]);
+        } finally {
+          setReviewsLoading(false);
+        }
+      }
+      fetchAllReviews();
+    }
+  }, [game]);
 
   const handleWishlistToggle = async () => {
     if (wishlistLoading || !game || !auth.isAuthenticated) return;
@@ -239,9 +260,9 @@ export default function GameDetails() {
               <Users className="text-primary" />
               Community Reviews
             </h2>
-            
+
             <div className="space-y-6">
-              {userReview ? (
+              {userReview && (
                 <div className="bg-surface/50 p-5 rounded-xl border border-gray-800">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -261,18 +282,20 @@ export default function GameDetails() {
                       {new Date(userReview.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  
+
                   {userReview.playtime_hours && (
                     <div className="text-sm text-gray-400 mb-2">
                       Playtime: {userReview.playtime_hours} hours
                     </div>
                   )}
-                  
+
                   {userReview.review_text && (
                     <p className="text-gray-300 text-sm leading-relaxed">{userReview.review_text}</p>
                   )}
                 </div>
-              ) : (
+              )}
+
+              {!userReview && auth.isAuthenticated && (
                 <div className="bg-surface/50 p-5 rounded-xl border border-gray-800 text-center">
                   <p className="text-gray-400">You haven't reviewed this game yet.</p>
                   <button
@@ -281,6 +304,60 @@ export default function GameDetails() {
                   >
                     Write a Review
                   </button>
+                </div>
+              )}
+
+              {!auth.isAuthenticated && (
+                <div className="bg-surface/50 p-5 rounded-xl border border-gray-800 text-center">
+                  <p className="text-gray-400">
+                    <Link to="/login" className="text-primary hover:text-primaryHover underline">Sign in</Link> to review this game
+                  </p>
+                </div>
+              )}
+
+              {reviewsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-primary" size={24} />
+                </div>
+              ) : allReviews.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-gray-400 text-sm">{allReviews.length} reviews from the community</p>
+                  {allReviews.map((review) => (
+                    <div key={review.id} className="bg-surface/50 p-5 rounded-xl border border-gray-800">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{review.user?.username || 'Anonymous'}</span>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={14}
+                                className={i < Math.floor(review.rating / 2) ? 'text-yellow-400 fill-current' : 'text-gray-600'}
+                              />
+                            ))}
+                            <span className="text-sm text-gray-300 ml-1">{review.rating}/10</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      {review.playtime_hours && (
+                        <div className="text-sm text-gray-400 mb-2">
+                          Playtime: {review.playtime_hours} hours
+                        </div>
+                      )}
+
+                      {review.review_text && (
+                        <p className="text-gray-300 text-sm leading-relaxed">{review.review_text}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>No reviews yet. Be the first to review this game!</p>
                 </div>
               )}
             </div>
