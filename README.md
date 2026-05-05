@@ -15,40 +15,80 @@ O WastedHours é uma plataforma web voltada para a curadoria, catalogação e av
 * 	**Banco de Dados**: SQLite (local development)
 * 	**Linguagem Frontend**: JavaScript / React
 * 	**Frontend Build**: Vite
-* 	**Agentes de IA**: Copilot (Gemini e GPT)
+* 	**Agentes de IA**: Copilot (Gemini/GPT) e Claude Code (Haiku/Sonnet)
 
 ## Como executar localmente
 ### Backend
 1. Abra um terminal em `backend`
-2. Crie e ative um ambiente virtual Python
-   - Windows PowerShell:
-     ```powershell
-     python -m venv .venv
-     .\.venv\Scripts\Activate.ps1
+2. Use um ambiente virtual Python (recomendado)
+     ```cmd
+     python -m venv venv
+     ```
+     ```cmd
+     venv\Scripts\Activate # Windows
+     source venv/bin/activate # Linux/Mac
      ```
 3. Instale as dependências:
-   ```powershell
+   ```cmd
    pip install -r requirements.txt
    ```
 4. Execute o backend:
-   ```powershell
+   ```cmd
    python app.py
    ```
 5. A API estará disponível em `http://127.0.0.1:5000`
+(sujeito a alteração, confira a saída do terminal)
 
 ### Frontend
 1. Abra um terminal em `frontend`
 2. Instale dependências npm:
-   ```powershell
+   ```cmd
    npm install
    ```
 3. Execute o frontend:
-   ```powershell
+   ```cmd
    npm run dev
    ```
 4. O site será servido por padrão em `http://localhost:5173`
+(sujeito a alteração, confira a saída do terminal)
 
-> Observação: o backend usa um banco de dados SQLite local (`backend/games.db`) para desenvolvimento.
+> Observação: o backend usa um banco de dados SQLite local (`backend/games.db`) para acesso aos dados.
+
+## Estrutura do Backend
+
+```
+backend/
+├── app.py              # App factory: configura Flask, registra blueprints
+├── models.py           # Modelos SQLAlchemy (Game, User, Wishlist, Library, Review, ...)
+├── routes/             # Blueprints por domínio — cada arquivo = um grupo de endpoints
+│   ├── games.py        # GET/POST/PUT/DELETE /api/games, /api/genres, /api/status
+│   ├── auth.py         # /api/auth/register, /api/auth/login, /api/auth/me
+│   ├── wishlist.py     # /api/wishlist
+│   ├── library.py      # /api/library
+│   └── reviews.py      # /api/reviews, /api/reviews/<id>/user-review
+├── utils/              # Funções auxiliares reutilizadas entre rotas
+│   ├── auth.py         # generate_token, get_authenticated_user, login_required
+│   └── helpers.py      # wasted_score, parse_date, apply_game_data, ...
+└── scripts/            # Scripts avulsos de manutenção
+    ├── populate_db.py          # Busca jogos da RAWG API e popula o banco
+    ├── migrate_and_update.py   # Altera schema e atualiza detalhes dos jogos
+    ├── migrate_reviews.py      # Migração: cria tabela de reviews
+    └── migrate_wishlist.py     # Migração: cria tabelas de usuário e wishlist
+```
+
+Os scripts de manutenção são executados como módulos a partir de dentro de `backend/`:
+
+```cmd
+python -m scripts.populate_db
+python -m scripts.migrate_and_update
+```
+
+# Estrutura do Frontend
+# TODO
+
+```
+frontend/
+```
 
 ## Histórias de Usuário
 1.	Como jogador, quero criar uma conta para manter um histórico pessoal dos jogos que possuo.
