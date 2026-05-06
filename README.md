@@ -84,10 +84,35 @@ python -m scripts.migrate_and_update
 ```
 
 # Estrutura do Frontend
-# TODO
-
 ```
 frontend/
+├── index.html    # Arquivo base do site que o React se insere
+├── public/       # Contêm os ícones SVG gerais do site
+├── src/          # Código fonte em React
+|   ├── App.css      # Define o estilo base da aplicação
+|   ├── App.jsx      # Define o layout & pontos de acesso das páginas
+|   ├── assets/      # Não utilizado
+|   ├── components/  # Componentes reutilizáveis entre as páginas
+|   |   ├── GameCard.jsx    # Cartão de um jogo
+|   |   └── NavBar.jsx      # Barra de navegação do site
+|   ├── index.css    # Importa os estilos tailwind para o site
+|   ├── lib/         # Lógica compartilhada entre componentes
+|   |   ├── api.js            # Comunicação com o backend
+|   |   ├── auth.jsx          # Autenticação do usuário
+|   |   ├── catalogFilters.js # Filtragens customizadas que definimos
+|   |   └── utils.js          # Utilidades gerais
+|   ├── main.jsx     # Ponto de entrada para o React
+|   └── pages/       # Definiões individuais por página
+|       ├── GameDetails.jsx   # Detalhes do jogo
+|       ├── GamesCatalog.jsx  # Catálogo
+|       ├── Home.jsx          # Página inicial
+|       ├── Library.jsx       # Biblioteca do usuário
+|       ├── Login.jsx         # Login no sistema
+|       ├── Profile.jsx       # Perfil do usuário
+|       ├── Resgister.jsx     # Registro de usuário
+|       ├── SearchResults.jsx # Resultados da pesquisa
+|       └── Whishlist.jsx     # Lista de desejos
+└── tailwind.config.js # Tema de cor do site 
 ```
 
 ## Histórias de Usuário
