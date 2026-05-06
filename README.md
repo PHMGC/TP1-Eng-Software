@@ -223,3 +223,50 @@ erDiagram
     USER ||--o{ LIBRARY : "owns"
     USER ||--o{ REVIEW : "writes"
 ```
+### Fluxo de navegação
+```mermaid
+flowchart TD
+  subgraph App["App Layout"]
+    direction TB
+    Home["Home (/)", 🏠]:::indigo
+    GamesCatalog["Games Catalog (/games)"]:::violet
+    GameDetails["Game Details (/game/:id)"]:::cyan
+    SearchResults["Search Results (/search)"]:::orange
+    Wishlist["Wishlist (/wishlist)"]:::fuchsia
+    Library["Library (/library)"]:::teal
+    Profile["Profile (/profile)"]:::green
+    Login["Login (/login)"]:::rose
+    Register["Register (/register)"]:::yellow
+  end
+
+  %% Navigation flows
+  Home -->|Clicks on game| GameDetails
+  Home -->|Browse by genre| SearchResults
+  Home -->|Use catalog links| GamesCatalog
+
+  GamesCatalog --> GameDetails
+  GamesCatalog --> SearchResults
+
+  SearchResults --> GameDetails
+
+  GameDetails --> Wishlist
+  GameDetails --> Library
+  GameDetails --> Login
+
+  Wishlist --> GameDetails
+  Library --> GameDetails
+
+  Login --> Profile
+  Register --> Profile
+  Profile --> Home
+
+  classDef indigo stroke:#818cf8,fill:#eef2ff
+  classDef violet stroke:#a78bfa,fill:#f5f3ff
+  classDef cyan stroke:#22d3ee,fill:#ecfeff
+  classDef orange stroke:#fb923c,fill:#fff7ed
+  classDef fuchsia stroke:#e879f9,fill:#fdf4ff
+  classDef teal stroke:#2dd4bf,fill:#f0fdfa
+  classDef green stroke:#4ade80,fill:#f0fdf4
+  classDef yellow stroke:#facc15,fill:#fefce8
+  classDef rose stroke:#fb7185,fill:#fff1f2
+```
