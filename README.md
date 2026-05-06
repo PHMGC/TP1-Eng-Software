@@ -98,4 +98,4 @@ frontend/
 5.	Como usuário, quero visualizar rankings globais de jogos baseados nas melhores avaliações e métricas de popularidade para descobrir novos títulos.
 6.	Como crítico, quero escrever análises detalhadas sobre minha experiência com um jogo para compartilhar minha opinião.
 7.	Como usuário, quero filtrar jogos por gênero para encontrar novos títulos dentro do meu interesse.
-8.	Como administrador, quero cadastrar novos jogos na base de dados para manter o catálogo atualizado.
+8.	Como usuário, quero buscar jogos mais curtos para seções rápidas.
