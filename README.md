@@ -84,10 +84,35 @@ python -m scripts.migrate_and_update
 ```
 
 # Estrutura do Frontend
-# TODO
-
 ```
 frontend/
+├── index.html    # Arquivo base do site que o React se insere
+├── public/       # Contêm os ícones SVG gerais do site
+├── src/          # Código fonte em React
+|   ├── App.css      # Define o estilo base da aplicação
+|   ├── App.jsx      # Define o layout & pontos de acesso das páginas
+|   ├── assets/      # Não utilizado
+|   ├── components/  # Componentes reutilizáveis entre as páginas
+|   |   ├── GameCard.jsx    # Cartão de um jogo
+|   |   └── NavBar.jsx      # Barra de navegação do site
+|   ├── index.css    # Importa os estilos tailwind para o site
+|   ├── lib/         # Lógica compartilhada entre componentes
+|   |   ├── api.js            # Comunicação com o backend
+|   |   ├── auth.jsx          # Autenticação do usuário
+|   |   ├── catalogFilters.js # Filtragens customizadas que definimos
+|   |   └── utils.js          # Utilidades gerais
+|   ├── main.jsx     # Ponto de entrada para o React
+|   └── pages/       # Definiões individuais por página
+|       ├── GameDetails.jsx   # Detalhes do jogo
+|       ├── GamesCatalog.jsx  # Catálogo
+|       ├── Home.jsx          # Página inicial
+|       ├── Library.jsx       # Biblioteca do usuário
+|       ├── Login.jsx         # Login no sistema
+|       ├── Profile.jsx       # Perfil do usuário
+|       ├── Resgister.jsx     # Registro de usuário
+|       ├── SearchResults.jsx # Resultados da pesquisa
+|       └── Whishlist.jsx     # Lista de desejos
+└── tailwind.config.js # Tema de cor do site 
 ```
 
 ## Histórias de Usuário
@@ -98,4 +123,150 @@ frontend/
 5.	Como usuário, quero visualizar rankings globais de jogos baseados nas melhores avaliações e métricas de popularidade para descobrir novos títulos.
 6.	Como crítico, quero escrever análises detalhadas sobre minha experiência com um jogo para compartilhar minha opinião.
 7.	Como usuário, quero filtrar jogos por gênero para encontrar novos títulos dentro do meu interesse.
-8.	Como administrador, quero cadastrar novos jogos na base de dados para manter o catálogo atualizado.
+8.	Como usuário, quero buscar jogos mais curtos para seções rápidas.
+
+# Diagramas
+### Relação de Entidades no Sistema
+```mermaid
+erDiagram
+    GAME {
+        int id PK
+        string slug
+        string name
+        date released
+        boolean tba
+        string background_image
+        float rating
+        int rating_top
+        int metacritic
+        int playtime
+        datetime updated
+        json ratings_distribution
+        json added_by_status
+        string esrb_rating
+        text description
+        text description_raw
+        json developers
+        json publishers
+    }
+
+    PLATFORM {
+        int id PK
+        string name
+        string slug
+    }
+
+    GENRE {
+        int id PK
+        string name
+        string slug
+    }
+
+    TAG {
+        int id PK
+        string name
+        string slug
+        string language
+    }
+
+    SCREENSHOT {
+        int id PK
+        int game_id FK
+        string image_url
+    }
+
+    USER {
+        int id PK
+        string username
+        string email
+        string password_hash
+        datetime created_at
+    }
+
+    WISHLIST {
+        int id PK
+        int user_id FK
+        int game_id FK
+        datetime added_at
+    }
+
+    LIBRARY {
+        int id PK
+        int user_id FK
+        int game_id FK
+        datetime added_at
+    }
+
+    REVIEW {
+        int id PK
+        int user_id FK
+        int game_id FK
+        float rating
+        int playtime_hours
+        text review_text
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% Many-to-many relationships
+    GAME ||--o{ PLATFORM : "game_platforms"
+    GAME ||--o{ GENRE : "game_genres"
+    GAME ||--o{ TAG : "game_tags"
+
+    %% One-to-many relationships
+    GAME ||--o{ SCREENSHOT : "has"
+    GAME ||--o{ WISHLIST : "in"
+    GAME ||--o{ LIBRARY : "in"
+    GAME ||--o{ REVIEW : "has"
+
+    USER ||--o{ WISHLIST : "adds"
+    USER ||--o{ LIBRARY : "owns"
+    USER ||--o{ REVIEW : "writes"
+```
+### Fluxo de navegação
+```mermaid
+flowchart TD
+  subgraph App["App Layout"]
+    direction TB
+    Home["Home (/)", 🏠]:::indigo
+    GamesCatalog["Games Catalog (/games)"]:::violet
+    GameDetails["Game Details (/game/:id)"]:::cyan
+    SearchResults["Search Results (/search)"]:::orange
+    Wishlist["Wishlist (/wishlist)"]:::fuchsia
+    Library["Library (/library)"]:::teal
+    Profile["Profile (/profile)"]:::green
+    Login["Login (/login)"]:::rose
+    Register["Register (/register)"]:::yellow
+  end
+
+  %% Navigation flows
+  Home -->|Clicks on game| GameDetails
+  Home -->|Browse by genre| SearchResults
+  Home -->|Use catalog links| GamesCatalog
+
+  GamesCatalog --> GameDetails
+  GamesCatalog --> SearchResults
+
+  SearchResults --> GameDetails
+
+  GameDetails --> Wishlist
+  GameDetails --> Library
+  GameDetails --> Login
+
+  Wishlist --> GameDetails
+  Library --> GameDetails
+
+  Login --> Profile
+  Register --> Profile
+  Profile --> Home
+
+  classDef indigo stroke:#818cf8,fill:#eef2ff
+  classDef violet stroke:#a78bfa,fill:#f5f3ff
+  classDef cyan stroke:#22d3ee,fill:#ecfeff
+  classDef orange stroke:#fb923c,fill:#fff7ed
+  classDef fuchsia stroke:#e879f9,fill:#fdf4ff
+  classDef teal stroke:#2dd4bf,fill:#f0fdfa
+  classDef green stroke:#4ade80,fill:#f0fdf4
+  classDef yellow stroke:#facc15,fill:#fefce8
+  classDef rose stroke:#fb7185,fill:#fff1f2
+```
