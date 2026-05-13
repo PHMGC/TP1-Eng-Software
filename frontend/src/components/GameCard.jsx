@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 import { getWastedTimeStatus, calculateScore } from '../lib/utils';
 
 
-export default function GameCard({ game }) {
+export default function GameCard({ game, hideWishlistButton = false }) {
   const auth = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -73,11 +73,11 @@ export default function GameCard({ game }) {
         <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-80" />
 
         {/* Wishlist Button */}
-        {auth.isAuthenticated && (
+        {auth.isAuthenticated && !hideWishlistButton && (
           <button
             onClick={handleWishlistToggle}
             disabled={wishlistLoading}
-            className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 ${
+            className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 z-10 ${
               isInWishlist
                 ? 'bg-red-600 hover:bg-red-700 text-white'
                 : 'bg-black/50 hover:bg-black/70 text-gray-300 hover:text-white'

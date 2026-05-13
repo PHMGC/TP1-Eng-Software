@@ -77,11 +77,14 @@ export default function Library() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {libraryItems.map(item => (
-            <div key={item.id} className="relative">
-              <GameCard game={item.game} />
+            <div key={item.id} className="relative group">
+              <GameCard game={item.game} hideWishlistButton={true} />
               <button
-                onClick={() => handleRemoveFromLibrary(item.game_id)}
-                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRemoveFromLibrary(item.game_id);
+                }}
+                className="absolute top-3 right-3 p-2 rounded-full z-10 transition-all duration-200 bg-red-600 hover:bg-red-700 text-white shadow-lg"
                 title="Remover da biblioteca"
               >
                 <BookOpen size={16} />

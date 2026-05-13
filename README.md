@@ -15,7 +15,7 @@ O WastedHours é uma plataforma web voltada para a curadoria, catalogação e av
 * 	**Banco de Dados**: SQLite (local development)
 * 	**Linguagem Frontend**: JavaScript / React
 * 	**Frontend Build**: Vite
-* 	**Agentes de IA**: Copilot (Gemini/GPT) e Claude Code (Haiku/Sonnet)
+* 	**Agentes de IA**: Copilot (Gemini/GPT), Claude Code (Haiku/Sonnet), Gemini CLI
 
 ## Como executar localmente
 ### Backend
