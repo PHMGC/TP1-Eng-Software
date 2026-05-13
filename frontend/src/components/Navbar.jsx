@@ -3,6 +3,7 @@ import { Search, Hourglass, User, Heart, BookOpen, Star, Menu, LogOut, LogIn } f
 import { useState, useEffect, useRef } from 'react';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { calculateScore, getWastedTimeStatus } from '../lib/utils';
 
 export default function Navbar({ onOpenSidebar }) {
   const [query, setQuery] = useState('');
@@ -99,29 +100,39 @@ export default function Navbar({ onOpenSidebar }) {
               ) : (
                 <>
                   <div className="max-h-[60vh] overflow-y-auto">
-                    {suggestions.map(g => (
-                      <Link 
-                        key={g.id} 
-                        to={`/game/${g.id}`} 
-                        onClick={() => setShowSuggestions(false)}
-                        className="flex items-center gap-3 p-3 hover:bg-surfaceHover transition-colors border-b border-gray-800/50 last:border-0"
-                      >
-                        <img 
-                          src={g.background_image || 'https://via.placeholder.com/40'} 
-                          alt={g.name} 
-                          className="w-10 h-10 object-cover rounded-md bg-gray-900 shrink-0" 
-                        />
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="text-white text-sm font-semibold truncate leading-tight mb-0.5">{g.name}</span>
-                          <span className="text-xs text-gray-400 truncate">
-                            {g.genres ? g.genres.map(gn => gn.name).join(', ') : 'Desconhecido'}
-                          </span>
-                        </div>
-                        <div className="ml-auto flex items-center justify-center gap-1 text-xs text-yellow-500 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-md shrink-0">
-                          {g.rating ? g.rating.toFixed(1) : 'N/A'} <Star size={10} fill="currentColor" className="mt-[1px]" />
-                        </div>
-                      </Link>
-                    ))}
+                    {suggestions.map(g => {
+                      const finalScore = calculateScore(g);
+                      const status = getWastedTimeStatus(finalScore);
+                      return (
+                        <Link 
+                          key={g.id} 
+                          to={`/game/${g.id}`} 
+                          onClick={() => setShowSuggestions(false)}
+                          className="flex items-center gap-3 p-3 hover:bg-surfaceHover transition-colors border-b border-gray-800/50 last:border-0"
+                        >
+                          <img 
+                            src={g.background_image || 'https://via.placeholder.com/40'} 
+                            alt={g.name} 
+                            className="w-10 h-10 object-cover rounded-md bg-gray-900 shrink-0" 
+                          />
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-white text-sm font-semibold truncate leading-tight mb-0.5">{g.name}</span>
+                            <span className="text-xs text-gray-400 truncate">
+                              {g.genres ? g.genres.map(gn => gn.name).join(', ') : 'Desconhecido'}
+                            </span>
+                          </div>
+                          <div className={`ml-auto flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md shrink-0 border ${status.bg} ${status.border} ${status.color}`} title={`Score: ${finalScore}`}>
+                            {finalScore}
+                            <img
+                              src={`/hourglass-${status.hourglassLevel}.svg`}
+                              alt={`Hourglass ${status.hourglassLevel}`}
+                              className="h-3 w-3"
+                              style={{ filter: status.filter }}
+                            />
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                   <button 
                     onClick={handleSearch}
