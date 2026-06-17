@@ -54,6 +54,35 @@ O WastedHours é uma plataforma web voltada para a curadoria, catalogação e av
 
 > Observação: o backend usa um banco de dados SQLite local (`backend/games.db`) para acesso aos dados.
 
+## Testes (TP2)
+
+O projeto possui testes de unidade/integração no backend (pytest) e testes end-to-end (Playwright).
+
+### Unidade / Integração (backend)
+A partir da pasta `backend`, com as dependências instaladas:
+```cmd
+pytest
+```
+Roda a suíte e gera o relatório de cobertura no terminal e em `backend/htmlcov/index.html`.
+Cobertura atual: **97%** (mínimo exigido: 80%). Os scripts de manutenção em `scripts/` (que
+acessam a API externa RAWG) são excluídos da medição de cobertura.
+
+### End-to-End (Playwright)
+A partir da pasta `frontend`. Na primeira vez, instale o navegador usado nos testes:
+```cmd
+npm install
+npx playwright install chromium
+```
+Para rodar os 4 testes E2E:
+```cmd
+npm run e2e
+```
+O Playwright sobe automaticamente o backend (porta 5000) e o frontend (porta 5173) — ou reusa
+caso já estejam rodando. Relatório visual: `npm run e2e:report`. Modo interativo: `npm run e2e:ui`.
+
+Fluxos cobertos pelos E2E: registro + login, navegação no catálogo até os detalhes de um jogo,
+adicionar um jogo à wishlist e avaliar um jogo.
+
 ## Estrutura do Backend
 
 ```
