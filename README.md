@@ -109,9 +109,9 @@ frontend/
 |       ├── Library.jsx       # Biblioteca do usuário
 |       ├── Login.jsx         # Login no sistema
 |       ├── Profile.jsx       # Perfil do usuário
-|       ├── Resgister.jsx     # Registro de usuário
+|       ├── Register.jsx      # Registro de usuário
 |       ├── SearchResults.jsx # Resultados da pesquisa
-|       └── Whishlist.jsx     # Lista de desejos
+|       └── Wishlist.jsx      # Lista de desejos
 └── tailwind.config.js # Tema de cor do site 
 ```
 
