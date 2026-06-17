@@ -9,7 +9,7 @@ from routes.library import library_bp
 from routes.reviews import reviews_bp
 
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-for-dev')
     app.config['JWT_EXPIRATION_DELTA'] = int(os.environ.get('JWT_EXPIRATION_DELTA', 86400))
@@ -17,6 +17,10 @@ def create_app():
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'games.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Allow tests (and other callers) to override config, e.g. an in-memory DB.
+    if test_config:
+        app.config.update(test_config)
 
     db.init_app(app)
     CORS(app)
