@@ -38,7 +38,10 @@ def create_review():
 
     user_id = g.current_user.id
     game_id = data['game_id']
-    rating = data['rating']
+    try:
+        rating = float(data['rating'])
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Rating must be a number between 1 and 10'}), 400
 
     if not (1 <= rating <= 10):
         return jsonify({'error': 'Rating must be between 1 and 10'}), 400
@@ -84,7 +87,10 @@ def update_review(review_id):
         return jsonify({'error': 'JSON body required'}), 400
 
     if 'rating' in data:
-        rating = data['rating']
+        try:
+            rating = float(data['rating'])
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Rating must be a number between 1 and 10'}), 400
         if not (1 <= rating <= 10):
             return jsonify({'error': 'Rating must be between 1 and 10'}), 400
         review.rating = rating

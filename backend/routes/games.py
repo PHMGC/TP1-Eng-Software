@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import math
 from models import db, Game, Genre
 from utils.helpers import wasted_score, apply_game_data
+from utils.auth import login_required
 
 games_bp = Blueprint('games', __name__, url_prefix='/api')
 
@@ -20,9 +21,9 @@ def get_status():
 @games_bp.route('/games', methods=['GET'])
 def get_games():
     """List, search, filter or sort games. Params: page, limit, offset, search, genre, sort, minRating, maxRating, minPlaytime, maxPlaytime."""
-    page = max(1, int(request.args.get('page', 1)))
-    limit = max(1, int(request.args.get('limit', 20)))
-    offset = max(0, int(request.args.get('offset', 0)))
+    page = max(1, request.args.get('page', 1, type=int))
+    limit = max(1, request.args.get('limit', 20, type=int))
+    offset = max(0, request.args.get('offset', 0, type=int))
     search = request.args.get('search', '').strip().lower()
     genre = request.args.get('genre', '').strip().lower()
     sort_by = request.args.get('sort', '').strip().lower()
@@ -120,8 +121,8 @@ def get_games():
 def search_games():
     """Search games by name. Params: query or search (required), limit, offset."""
     query = request.args.get('query', '').strip() or request.args.get('search', '').strip()
-    limit = int(request.args.get('limit', 20))
-    offset = int(request.args.get('offset', 0))
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
 
     if not query:
         return jsonify({'error': 'query parameter is required'}), 400
@@ -147,20 +148,20 @@ def filter_games():
     rating_max = request.args.get('rating_max', type=float)
     min_playtime = request.args.get('minPlaytime', type=int)
     max_playtime = request.args.get('maxPlaytime', type=int)
-    limit = int(request.args.get('limit', 20))
-    offset = int(request.args.get('offset', 0))
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
 
     games = Game.query.all()
 
     if genre_name:
         games = [g for g in games if any(
-            genre_name in gen.name.lower() or genre_name in gen.slug.lower()
+            genre_name in gen.name.lower() or (gen.slug and genre_name in gen.slug.lower())
             for gen in g.genres
         )]
 
     if platform_name:
         games = [g for g in games if any(
-            platform_name in plat.name.lower() or platform_name in plat.slug.lower()
+            platform_name in plat.name.lower() or (plat.slug and platform_name in plat.slug.lower())
             for plat in g.platforms
         )]
 
@@ -197,8 +198,8 @@ def filter_games():
 @games_bp.route('/games/top-rated', methods=['GET'])
 def top_rated_games():
     """Get top-rated games sorted by rating. Params: limit, offset."""
-    limit = int(request.args.get('limit', 20))
-    offset = int(request.args.get('offset', 0))
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
 
     games = Game.query.filter(Game.rating.isnot(None)).order_by(Game.rating.desc()).all()
     paginated = games[offset:offset + limit]
@@ -215,8 +216,8 @@ def top_rated_games():
 @games_bp.route('/games/trending', methods=['GET'])
 def trending_games():
     """Get trending games from the last 6 months sorted by Wasted score. Params: limit, offset."""
-    limit = int(request.args.get('limit', 20))
-    offset = int(request.args.get('offset', 0))
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
 
     six_months_ago = date.today() - timedelta(days=183)
     games = Game.query.filter(
@@ -243,7 +244,7 @@ def trending_games():
 def top_k_games_by_period():
     """Get top k games by rating released in a specific period.
     Params: k (limit, default 10), start_year, start_month, end_year, end_month (all required)."""
-    k = int(request.args.get('k', 10))
+    k = request.args.get('k', 10, type=int)
     start_year = request.args.get('start_year')
     start_month = request.args.get('start_month')
     end_year = request.args.get('end_year')
@@ -310,6 +311,7 @@ def get_game(game_id):
 
 
 @games_bp.route('/games', methods=['POST'])
+@login_required
 def create_game():
     """Create a new game. Required: slug, name. Supports genres, platforms, tags, screenshots."""
     data = request.get_json(silent=True)
@@ -332,6 +334,7 @@ def create_game():
 
 
 @games_bp.route('/games/<int:game_id>', methods=['PUT'])
+@login_required
 def update_game(game_id):
     """Update an existing game. Partial updates supported."""
     game = Game.query.get_or_404(game_id)
@@ -346,6 +349,7 @@ def update_game(game_id):
 
 
 @games_bp.route('/games/<int:game_id>', methods=['DELETE'])
+@login_required
 def delete_game(game_id):
     """Delete a game by ID."""
     game = Game.query.get_or_404(game_id)

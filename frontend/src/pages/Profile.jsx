@@ -37,9 +37,9 @@ export default function Profile() {
 
       <div className="bg-surface border border-gray-800 rounded-3xl p-8">
         <div className="mb-6 text-gray-300">
-          <p className="text-lg font-semibold text-white">Bem-vindo à sua conta</p>
+          <p className="text-lg font-semibold text-white">Bem-vindo, {auth.user?.username || 'Usuário'}!</p>
           <p className="text-sm text-gray-400">
-            Ainda não há informações de usuário, pois o sistema de autenticação não foi implementado.
+            Gerencie sua conta, suas avaliações e sua lista de desejos por aqui.
           </p>
         </div>
 
