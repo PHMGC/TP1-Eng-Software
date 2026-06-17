@@ -69,10 +69,11 @@ def get_current_user():
 def delete_current_user():
     """Delete the current authenticated user account."""
     try:
-        from models import Review, Wishlist
+        from models import Review, Wishlist, Library
 
         Review.query.filter_by(user_id=g.current_user.id).delete()
         Wishlist.query.filter_by(user_id=g.current_user.id).delete()
+        Library.query.filter_by(user_id=g.current_user.id).delete()
 
         db.session.delete(g.current_user)
         db.session.commit()

@@ -73,7 +73,7 @@ export default function GameDetails() {
     if (game && auth.isAuthenticated) {
       async function fetchUserReview() {
         try {
-          const response = await api.get(`/games/${game.id}/user-review`);
+          const response = await api.get(`/reviews/games/${game.id}/user-review`);
           setUserReview(response.data);
           setRatingForm({
             rating: response.data.rating,
