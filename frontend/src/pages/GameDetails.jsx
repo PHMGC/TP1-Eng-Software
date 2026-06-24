@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X, BookOpen } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X, BookOpen, ThumbsUp } from 'lucide-react';
 import { getWastedTimeStatus } from '../lib/utils';
 
 
@@ -177,6 +177,37 @@ export default function GameDetails() {
     setRatingForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleLikeReview = async (reviewId) => {
+    if (!auth.isAuthenticated) {
+      alert("Você precisa estar logado para avaliar se a review foi útil.");
+      return;
+    }
+    
+    try {
+      const res = await api.post(`/reviews/${reviewId}/like`);
+      // Sucesso no like
+      setAllReviews(allReviews.map(r => r.id === reviewId ? { ...r, likes_count: res.data.likes_count } : r));
+      if (userReview && userReview.id === reviewId) {
+        setUserReview({ ...userReview, likes_count: res.data.likes_count });
+      }
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data?.error === 'Already liked') {
+        // Já estava com like, então remove o like
+        try {
+          const res = await api.delete(`/reviews/${reviewId}/like`);
+          setAllReviews(allReviews.map(r => r.id === reviewId ? { ...r, likes_count: res.data.likes_count } : r));
+          if (userReview && userReview.id === reviewId) {
+            setUserReview({ ...userReview, likes_count: res.data.likes_count });
+          }
+        } catch (unlikeErr) {
+          console.error(unlikeErr);
+        }
+      } else {
+        console.error(err);
+      }
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center py-20">
       <div className="animate-pulse w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin"/>
@@ -321,8 +352,18 @@ export default function GameDetails() {
                   )}
 
                   {userReview.review_text && (
-                    <p className="text-gray-300 text-sm leading-relaxed">{userReview.review_text}</p>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-4">{userReview.review_text}</p>
                   )}
+                  
+                  <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-800">
+                    <button 
+                      onClick={() => handleLikeReview(userReview.id)}
+                      className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
+                    >
+                      <ThumbsUp size={16} />
+                      {userReview.likes_count || 0} Útil
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -381,8 +422,18 @@ export default function GameDetails() {
                       )}
 
                       {review.review_text && (
-                        <p className="text-gray-300 text-sm leading-relaxed">{review.review_text}</p>
+                        <p className="text-gray-300 text-sm leading-relaxed mb-4">{review.review_text}</p>
                       )}
+
+                      <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-800">
+                        <button 
+                          onClick={() => handleLikeReview(review.id)}
+                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
+                        >
+                          <ThumbsUp size={16} />
+                          {review.likes_count || 0} Útil
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

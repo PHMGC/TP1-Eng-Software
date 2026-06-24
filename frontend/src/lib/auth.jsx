@@ -103,6 +103,11 @@ export function AuthProvider({ children }) {
     clearAuthStorage();
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+    setStoredUser(userData);
+  };
+
   const isGameInWishlist = (gameId) => {
     return wishlist.some(item => item.game_id === gameId);
   };
@@ -113,6 +118,7 @@ export function AuthProvider({ children }) {
       token,
       login,
       logout,
+      updateUser,
       isAuthenticated: !!user && !!token,
       wishlist,
       wishlistLoading,
