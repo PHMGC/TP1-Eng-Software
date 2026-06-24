@@ -220,6 +220,7 @@ class Review(db.Model):
 			'playtime_hours': self.playtime_hours,
 			'review_text': self.review_text,
 			'likes_count': self.likes.count(),
+			'likers': [{'id': l.user.id, 'username': l.user.username, 'avatar_url': l.user.avatar_url} for l in self.likes.all()],
 			'created_at': self.created_at.isoformat() if self.created_at else None,
 			'updated_at': self.updated_at.isoformat() if self.updated_at else None,
 			'user': {
@@ -235,5 +236,7 @@ class ReviewLike(db.Model):
 	user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
 	review_id = db.Column(db.Integer, db.ForeignKey('reviews.id', ondelete='CASCADE'), nullable=False)
 	created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+	user = db.relationship('User')
 
 	__table_args__ = (db.UniqueConstraint('user_id', 'review_id', name='_user_review_uc'),)

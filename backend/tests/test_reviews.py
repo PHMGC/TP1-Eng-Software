@@ -157,6 +157,7 @@ class TestReviewLike:
         resp = client.post(f"/api/reviews/{review['id']}/like", headers=h)
         assert resp.status_code == 200
         assert resp.get_json()['likes_count'] == 1
+        assert any(liker['username'] == 'liker' for liker in resp.get_json()['likers'])
         
         # Like again
         resp2 = client.post(f"/api/reviews/{review['id']}/like", headers=h)

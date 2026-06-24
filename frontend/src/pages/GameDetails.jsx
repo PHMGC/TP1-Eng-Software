@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, MessageSquareQuote, CheckCircle2, Loader2, X, BookOpen, ThumbsUp } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Heart, ShieldAlert, Users, User, MessageSquareQuote, CheckCircle2, Loader2, X, BookOpen, ThumbsUp } from 'lucide-react';
 import { getWastedTimeStatus } from '../lib/utils';
 
 
@@ -27,6 +27,11 @@ export default function GameDetails() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [allReviews, setAllReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [showLikers, setShowLikers] = useState({});
+
+  const toggleLikers = (reviewId) => {
+    setShowLikers(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
+  };
 
   useEffect(() => {
     async function fetchGame() {
@@ -327,11 +332,19 @@ export default function GameDetails() {
               {userReview && (
                 <div className="bg-surface/50 p-5 rounded-xl border border-gray-800">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{userReview.user?.username || 'You'}</span>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
+                    <div className="flex items-center gap-3">
+                      {userReview.user?.avatar_url ? (
+                        <img src={userReview.user.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-700" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
+                          <User size={20} className="text-gray-400" />
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-sm font-semibold text-white block mb-0.5">{userReview.user?.username || 'You'}</span>
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
                             key={i}
                             size={14}
                             className={i < Math.floor(userReview.rating / 2) ? 'text-yellow-400 fill-current' : 'text-gray-600'}
@@ -340,7 +353,8 @@ export default function GameDetails() {
                         <span className="text-sm text-gray-300 ml-1">{userReview.rating}/10</span>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-500">
+                  </div>
+                  <span className="text-xs text-gray-500">
                       {new Date(userReview.created_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -355,14 +369,44 @@ export default function GameDetails() {
                     <p className="text-gray-300 text-sm leading-relaxed mb-4">{userReview.review_text}</p>
                   )}
                   
-                  <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-800">
-                    <button 
-                      onClick={() => handleLikeReview(userReview.id)}
-                      className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
-                    >
-                      <ThumbsUp size={16} />
-                      {userReview.likes_count || 0} Útil
-                    </button>
+                  <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-gray-800">
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => handleLikeReview(userReview.id)}
+                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
+                      >
+                        <ThumbsUp size={16} />
+                      </button>
+                      <button 
+                        onClick={() => toggleLikers(userReview.id)}
+                        className="text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        {userReview.likes_count || 0} Útil
+                      </button>
+                    </div>
+                    {showLikers[userReview.id] && (
+                      <div className="text-sm text-gray-400 pl-6 mt-1 flex flex-wrap gap-2 items-center">
+                        {userReview.likers && userReview.likers.length > 0 ? (
+                          <>
+                            <span className="font-semibold">Curtido por:</span>
+                            {userReview.likers.map(l => (
+                              <div key={l.id} className="flex items-center gap-1.5 bg-background/50 px-2.5 py-1 rounded-full border border-gray-700" title={l.username}>
+                                {l.avatar_url ? (
+                                  <img src={l.avatar_url} alt={l.username} className="w-6 h-6 rounded-full object-cover border border-gray-600" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600">
+                                    <User size={12} className="text-gray-400" />
+                                  </div>
+                                )}
+                                <span className="text-sm font-medium text-gray-300">{l.username}</span>
+                              </div>
+                            ))}
+                          </>
+                        ) : (
+                          <span>Seja o primeiro a curtir!</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -397,11 +441,19 @@ export default function GameDetails() {
                   {allReviews.map((review) => (
                     <div key={review.id} className="bg-surface/50 p-5 rounded-xl border border-gray-800">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-white">{review.user?.username || 'Anonymous'}</span>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
+                        <div className="flex items-center gap-3">
+                          {review.user?.avatar_url ? (
+                            <img src={review.user.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-700" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
+                              <User size={20} className="text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-sm font-semibold text-white block mb-0.5">{review.user?.username || 'Anonymous'}</span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
                                 key={i}
                                 size={14}
                                 className={i < Math.floor(review.rating / 2) ? 'text-yellow-400 fill-current' : 'text-gray-600'}
@@ -410,7 +462,8 @@ export default function GameDetails() {
                             <span className="text-sm text-gray-300 ml-1">{review.rating}/10</span>
                           </div>
                         </div>
-                        <span className="text-xs text-gray-500">
+                      </div>
+                      <span className="text-xs text-gray-500">
                           {new Date(review.created_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -425,14 +478,44 @@ export default function GameDetails() {
                         <p className="text-gray-300 text-sm leading-relaxed mb-4">{review.review_text}</p>
                       )}
 
-                      <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-800">
-                        <button 
-                          onClick={() => handleLikeReview(review.id)}
-                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
-                        >
-                          <ThumbsUp size={16} />
-                          {review.likes_count || 0} Útil
-                        </button>
+                      <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-gray-800">
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => handleLikeReview(review.id)}
+                            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors"
+                          >
+                            <ThumbsUp size={16} />
+                          </button>
+                          <button 
+                            onClick={() => toggleLikers(review.id)}
+                            className="text-sm text-gray-400 hover:text-white transition-colors"
+                          >
+                            {review.likes_count || 0} Útil
+                          </button>
+                        </div>
+                        {showLikers[review.id] && (
+                          <div className="text-sm text-gray-400 pl-6 mt-1 flex flex-wrap gap-2 items-center">
+                            {review.likers && review.likers.length > 0 ? (
+                              <>
+                                <span className="font-semibold">Curtido por:</span>
+                                {review.likers.map(l => (
+                                  <div key={l.id} className="flex items-center gap-1.5 bg-background/50 px-2.5 py-1 rounded-full border border-gray-700" title={l.username}>
+                                    {l.avatar_url ? (
+                                      <img src={l.avatar_url} alt={l.username} className="w-6 h-6 rounded-full object-cover border border-gray-600" />
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600">
+                                        <User size={12} className="text-gray-400" />
+                                      </div>
+                                    )}
+                                    <span className="text-sm font-medium text-gray-300">{l.username}</span>
+                                  </div>
+                                ))}
+                              </>
+                            ) : (
+                              <span>Seja o primeiro a curtir!</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
