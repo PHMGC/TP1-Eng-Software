@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, g
-from models import db, Game, Review
+from models import db, Game, Review, ReviewLike
 from utils.auth import login_required
 
 reviews_bp = Blueprint('reviews', __name__, url_prefix='/api/reviews')
@@ -130,3 +130,36 @@ def get_user_review_for_game(game_id):
         return jsonify({'message': 'No review found'}), 404
 
     return jsonify(review.to_dict())
+
+
+@reviews_bp.route('/<int:review_id>/like', methods=['POST'])
+@login_required
+def like_review(review_id):
+    """Like a review."""
+    review = Review.query.get_or_404(review_id)
+    user_id = g.current_user.id
+
+    existing_like = ReviewLike.query.filter_by(user_id=user_id, review_id=review_id).first()
+    if existing_like:
+        return jsonify({'error': 'Already liked'}), 400
+
+    new_like = ReviewLike(user_id=user_id, review_id=review_id)
+    db.session.add(new_like)
+    db.session.commit()
+
+    return jsonify(review.to_dict()), 200
+
+
+@reviews_bp.route('/<int:review_id>/like', methods=['DELETE'])
+@login_required
+def unlike_review(review_id):
+    """Unlike a review."""
+    review = Review.query.get_or_404(review_id)
+    user_id = g.current_user.id
+
+    existing_like = ReviewLike.query.filter_by(user_id=user_id, review_id=review_id).first()
+    if existing_like:
+        db.session.delete(existing_like)
+        db.session.commit()
+
+    return jsonify(review.to_dict()), 200

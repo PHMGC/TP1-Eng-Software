@@ -140,6 +140,8 @@ class User(db.Model):
 	email = db.Column(db.String(255), unique=True, nullable=False)
 	password_hash = db.Column(db.String(255), nullable=False)
 	created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+	bio = db.Column(db.Text, nullable=True)
+	avatar_url = db.Column(db.String(500), nullable=True)
 
 	# Relationships
 	wishlist_items = db.relationship('Wishlist', backref='user', lazy=True)
@@ -150,6 +152,8 @@ class User(db.Model):
 			'id': self.id,
 			'username': self.username,
 			'email': self.email,
+			'bio': self.bio,
+			'avatar_url': self.avatar_url,
 			'created_at': self.created_at.isoformat() if self.created_at else None
 		}
 
@@ -205,6 +209,7 @@ class Review(db.Model):
 	# Relationships
 	user = db.relationship('User', backref='reviews')
 	game = db.relationship('Game', backref='reviews')
+	likes = db.relationship('ReviewLike', backref='review', lazy='dynamic', cascade="all, delete-orphan")
 
 	def to_dict(self):
 		return {
@@ -214,10 +219,21 @@ class Review(db.Model):
 			'rating': self.rating,
 			'playtime_hours': self.playtime_hours,
 			'review_text': self.review_text,
+			'likes_count': self.likes.count(),
 			'created_at': self.created_at.isoformat() if self.created_at else None,
 			'updated_at': self.updated_at.isoformat() if self.updated_at else None,
 			'user': {
 				'id': self.user.id,
-				'username': self.user.username
+				'username': self.user.username,
+				'avatar_url': self.user.avatar_url
 			} if self.user else None
 		}
+
+class ReviewLike(db.Model):
+	__tablename__ = 'review_likes'
+	id = db.Column(db.Integer, primary_key=True)
+	user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+	review_id = db.Column(db.Integer, db.ForeignKey('reviews.id', ondelete='CASCADE'), nullable=False)
+	created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+	__table_args__ = (db.UniqueConstraint('user_id', 'review_id', name='_user_review_uc'),)

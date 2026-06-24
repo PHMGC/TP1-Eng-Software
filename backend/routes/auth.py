@@ -64,6 +64,24 @@ def get_current_user():
     return jsonify(g.current_user.to_dict())
 
 
+@auth_bp.route('/me', methods=['PUT'])
+@login_required
+def update_current_user():
+    """Update current user profile (bio, avatar_url)."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    user = g.current_user
+    if 'bio' in data:
+        user.bio = data['bio']
+    if 'avatar_url' in data:
+        user.avatar_url = data['avatar_url']
+
+    db.session.commit()
+    return jsonify(user.to_dict()), 200
+
+
 @auth_bp.route('/me', methods=['DELETE'])
 @login_required
 def delete_current_user():

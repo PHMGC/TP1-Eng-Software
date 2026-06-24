@@ -93,3 +93,26 @@ class TestDeleteAccount:
 
         resp = client.delete('/api/auth/me', headers=h)
         assert resp.status_code == 200
+
+
+class TestUpdateUser:
+    def test_update_requires_auth(self, client):
+        assert client.put('/api/auth/me', json={'bio': 'test'}).status_code == 401
+
+    def test_update_profile(self, client, auth):
+        info = auth()
+        h = info['headers']
+        
+        resp = client.put('/api/auth/me', json={
+            'bio': 'A cool bio',
+            'avatar_url': 'http://example.com/avatar.png'
+        }, headers=h)
+        
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body['bio'] == 'A cool bio'
+        assert body['avatar_url'] == 'http://example.com/avatar.png'
+        
+        # Verify it persisted
+        resp2 = client.get('/api/auth/me', headers=h)
+        assert resp2.get_json()['bio'] == 'A cool bio'

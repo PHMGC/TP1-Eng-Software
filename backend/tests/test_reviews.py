@@ -135,3 +135,34 @@ class TestUserReviewForGame:
         client.post('/api/reviews', json={'game_id': game.id, 'rating': 7}, headers=h)
         resp = client.get(f'/api/reviews/games/{game.id}/user-review', headers=h)
         assert resp.status_code == 200 and resp.get_json()['rating'] == 7
+
+
+class TestReviewLike:
+    def _create(self, client, headers, game_id):
+        return client.post('/api/reviews',
+                           json={'game_id': game_id, 'rating': 5}, headers=headers).get_json()
+
+    def test_like_requires_auth(self, client, auth, make_game):
+        review = self._create(client, auth()['headers'], make_game().id)
+        assert client.post(f"/api/reviews/{review['id']}/like").status_code == 401
+
+    def test_can_like_and_unlike_review(self, client, auth, make_game):
+        owner = auth(username='r_owner', email='ro@a.com')
+        review = self._create(client, owner['headers'], make_game().id)
+        
+        liker = auth(username='liker', email='liker@a.com')
+        h = liker['headers']
+        
+        # Like
+        resp = client.post(f"/api/reviews/{review['id']}/like", headers=h)
+        assert resp.status_code == 200
+        assert resp.get_json()['likes_count'] == 1
+        
+        # Like again
+        resp2 = client.post(f"/api/reviews/{review['id']}/like", headers=h)
+        assert resp2.status_code == 400
+        
+        # Unlike
+        resp3 = client.delete(f"/api/reviews/{review['id']}/like", headers=h)
+        assert resp3.status_code == 200
+        assert resp3.get_json()['likes_count'] == 0
