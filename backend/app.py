@@ -7,6 +7,7 @@ from routes.auth import auth_bp
 from routes.wishlist import wishlist_bp
 from routes.library import library_bp
 from routes.reviews import reviews_bp
+from routes.users import users_bp
 
 
 def create_app(test_config=None):
@@ -33,6 +34,7 @@ def create_app(test_config=None):
     app.register_blueprint(wishlist_bp)
     app.register_blueprint(library_bp)
     app.register_blueprint(reviews_bp)
+    app.register_blueprint(users_bp)
 
     return app
 
