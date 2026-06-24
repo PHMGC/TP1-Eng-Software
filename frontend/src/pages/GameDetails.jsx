@@ -442,15 +442,27 @@ export default function GameDetails() {
                     <div key={review.id} className="bg-surface/50 p-5 rounded-xl border border-gray-800">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          {review.user?.avatar_url ? (
-                            <img src={review.user.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-700" />
+                          {review.user?.id ? (
+                            <Link to={`/users/${review.user.id}`} className="shrink-0">
+                              {review.user?.avatar_url ? (
+                                <img src={review.user.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-700 hover:border-primary transition-colors" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700 hover:border-primary transition-colors">
+                                  <User size={20} className="text-gray-400" />
+                                </div>
+                              )}
+                            </Link>
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
                               <User size={20} className="text-gray-400" />
                             </div>
                           )}
                           <div>
-                            <span className="text-sm font-semibold text-white block mb-0.5">{review.user?.username || 'Anonymous'}</span>
+                            {review.user?.id ? (
+                              <Link to={`/users/${review.user.id}`} className="text-sm font-semibold text-white block mb-0.5 hover:text-primary transition-colors">{review.user?.username || 'Anonymous'}</Link>
+                            ) : (
+                              <span className="text-sm font-semibold text-white block mb-0.5">{review.user?.username || 'Anonymous'}</span>
+                            )}
                             <div className="flex items-center gap-1">
                               {[...Array(5)].map((_, i) => (
                                 <Star
